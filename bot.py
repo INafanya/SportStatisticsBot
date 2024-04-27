@@ -19,7 +19,7 @@ async def main() -> None:
            '[%(asctime)s] - %(name)s - %(message)s'
     )
     # Выводим в консоль старт бота
-    logger.info('Starting bot_name...')
+    logger.info('Starting SportStatisticBot...')
 
     # Initialize Bot instance with default bot properties which will be passed to all API calls
     bot = Bot(
@@ -35,5 +35,5 @@ async def main() -> None:
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    #logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     asyncio.run(main())

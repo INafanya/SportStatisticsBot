@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from aiogram import Router, Bot, F
+from aiogram import Router, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
