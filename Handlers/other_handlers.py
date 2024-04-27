@@ -8,6 +8,21 @@ from aiogram.utils.formatting import Text, Bold
 
 router: Router = Router()
 
+#Словарь для хранения пробега(сбрасывается при перезапуске бота)
+mileage_data = {}
+
+def add_mileage_data(
+        telegram_id: int,
+        new_mileage: float
+        #week_mileage: float,
+        #month_mileage: float,
+        #total_mileage: float
+):
+    if telegram_id in mileage_data:
+        mileage_data[telegram_id] += new_mileage
+    else:
+        mileage_data[telegram_id] = new_mileage
+
 # Обработчик сообщения команды /start
 @router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
@@ -31,26 +46,32 @@ async def chat_user_added(message: Message):
 async def cmd_add_statistics(
         message: Message,
         command: CommandObject
-):
-    # Если не переданы никакие аргументы, то
-    # command.args будет None
-    if command.args is None:
-        await message.reply(
-            "Не передан пробег\n"
-            "Пример команды: /newstat <Пробег>"
-        )
-        return
-    try:
-        new_run = int(command.args)
-    except ValueError:
-        await message.reply(
-            "Пробег должен быть числом"
-        )
+    ):
+
+    # Объявляем переменные:
 
     time_now = datetime.now().strftime('%H:%M')
-    stat_user_id = message.from_user.id
+    telegram_id = message.from_user.id
 
+    # Обработка ошибок ввода пробега
+    try:
+        new_mileage = float(command.args)
+    except ValueError:
+        await message.reply(
+            "Укажите пробег числом"
+        )
+    except TypeError:
+        await message.reply(
+            "Укажите пробег"
+        )
+
+    if new_mileage > 100:
+        await message.reply(
+            "Обманщик!"
+        )
+        return
+    add_mileage_data(telegram_id, new_mileage)
     await message.reply(
         f"Новый пробег зафиксирован\n"
-        f"Итого за сегодня: {new_run} "
+        f"Итого за сегодня: {mileage_data[telegram_id]} "
     )
