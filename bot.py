@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from Config.config import config
+from Config.config_reader import config
 from aiogram import Bot, Dispatcher
 from Handlers import other_handlers
 from aiogram.client.default import DefaultBotProperties
@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 # Инициализация логирования
 logger = logging.getLogger(__name__)
 
+dp = Dispatcher()
 
 async def main() -> None:
     logging.basicConfig(
@@ -27,8 +28,6 @@ async def main() -> None:
     )
     # And the run events dispatching
     await dp.start_polling(bot)
-
-    dp = Dispatcher()
 
     # Регистрируем обработчики(handlers)
     dp.include_routers(other_handlers.router)
