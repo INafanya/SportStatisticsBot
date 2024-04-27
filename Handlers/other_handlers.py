@@ -4,6 +4,7 @@ from aiogram import Router, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
+import sqlite3
 
 
 router: Router = Router()
@@ -70,8 +71,29 @@ async def cmd_add_statistics(
             "Обманщик!"
         )
         return
-    add_mileage_data(telegram_id, new_mileage)
+    #add_mileage_data(telegram_id, new_mileage)
+    load_db_data(telegram_id, new_mileage)
     await message.reply(
         f"Новый пробег зафиксирован\n"
         f"Итого за сегодня: {mileage_data[telegram_id]} "
     )
+
+async def load_db_data(telegram_id, mileage):
+    # устанавливаем соединение с базой данных
+    conn = sqlite3.connect('../mileage.db')
+
+    # создаем курсор для выполнения операций с базой данных
+    cursor = conn.cursor()
+
+    # задаем значения для новой записи
+    telegram_id = telegram_id
+    day_mileage = mileage
+
+    # добавляем новую запись в таблицу users
+    cursor.execute('INSERT INTO users_mileage (telegram_id, day_mileaage) VALUES (?, ?)', (telegram_id, mileage))
+
+    # сохраняем изменения в базе данных
+    conn.commit()
+
+    # закрываем соединение с базой данных
+    conn.close()
