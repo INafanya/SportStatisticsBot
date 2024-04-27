@@ -26,14 +26,13 @@ async def main() -> None:
         token=config.bot_token.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
-    # And the run events dispatching
-    await dp.start_polling(bot)
 
     # Регистрируем обработчики(handlers)
-    dp.include_routers(other_handlers.router)
+    dp.include_router(other_handlers.router)
 
-    # Пропускаем накопившиеся апдейты телеги
+    # Пропускаем накопившиеся апдейты телеги и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
