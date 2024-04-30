@@ -4,25 +4,12 @@ from aiogram import Router, F
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
-import sqlite3
-
+from Handlers.db_handler import *
 
 router: Router = Router()
 
 #Словарь для хранения пробега(сбрасывается при перезапуске бота)
 mileage_data = {}
-
-def add_mileage_data(
-        telegram_id: int,
-        new_mileage: float
-        #week_mileage: float,
-        #month_mileage: float,
-        #total_mileage: float
-):
-    if telegram_id in mileage_data:
-        mileage_data[telegram_id] += new_mileage
-    else:
-        mileage_data[telegram_id] = new_mileage
 
 # Обработчик сообщения команды /start
 @router.message(CommandStart())
@@ -37,7 +24,7 @@ async def chat_user_added(message: Message):
             "Привет, ",
             Bold(user.full_name)
         )
-        # проперти full_name берёт сразу имя И фамилию
+        # проперти full_name берёт сразу имя и фамилию
         await message.reply(
             **content.as_kwargs()
         )
@@ -53,6 +40,7 @@ async def cmd_add_statistics(
 
     time_now = datetime.now().strftime('%H:%M')
     telegram_id = message.from_user.id
+    new_mileage = 0
 
     # Обработка ошибок ввода пробега
     try:
@@ -71,29 +59,9 @@ async def cmd_add_statistics(
             "Обманщик!"
         )
         return
-    #add_mileage_data(telegram_id, new_mileage)
-    load_db_data(telegram_id, new_mileage)
+
+    day_mileage = update_day_data_db(telegram_id, new_mileage)
     await message.reply(
         f"Новый пробег зафиксирован\n"
-        f"Итого за сегодня: {mileage_data[telegram_id]} "
+        f"Итого за сегодня: {day_mileage} "
     )
-
-async def load_db_data(telegram_id, mileage):
-    # устанавливаем соединение с базой данных
-    conn = sqlite3.connect('../mileage.db')
-
-    # создаем курсор для выполнения операций с базой данных
-    cursor = conn.cursor()
-
-    # задаем значения для новой записи
-    telegram_id = telegram_id
-    day_mileage = mileage
-
-    # добавляем новую запись в таблицу users
-    cursor.execute('INSERT INTO users_mileage (telegram_id, day_mileaage) VALUES (?, ?)', (telegram_id, mileage))
-
-    # сохраняем изменения в базе данных
-    conn.commit()
-
-    # закрываем соединение с базой данных
-    conn.close()
