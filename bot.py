@@ -1,16 +1,20 @@
 import asyncio
 import logging
-import sys
 from Config.config_reader import config
 from aiogram import Bot, Dispatcher
 from Handlers import other_handlers
+from Handlers.bot_schedulers import bot_schedulers
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
+
+# Инициализация таймеров
+#bot_schedulers()
 
 async def main() -> None:
     logging.basicConfig(

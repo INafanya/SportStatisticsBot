@@ -1,23 +1,22 @@
 import sqlite3
 
-import sqlite3
+telegram_id = 1060800091
 
-# устанавливаем соединение с базой данных
 conn = sqlite3.connect('mileage.db')
-
-# создаем курсор для выполнения операций с базой данных
 cursor = conn.cursor()
 
-# задаем значения для новой записи
-telegram_id = 11111
-day_mileage = 5
+cursor.execute('''SELECT day_mileage, week_mileage, month_mileage, total_mileage FROM users_mileage
+                    WHERE telegram_id = ?''', (telegram_id,),)
 
+result = cursor.fetchone()
 
-# добавляем новую запись в таблицу users
-cursor.execute('INSERT INTO users_mileage (telegram_id, day_mileage) VALUES (?, ?)', (telegram_id, day_mileage))
+print(result)
 
-# сохраняем изменения в базе данных
+day_mileage, week_mileage, month_mileage, total_mileage = result
+
+day_mileage += 7
+print(day_mileage,week_mileage,month_mileage,total_mileage)
+
 conn.commit()
-
-# закрываем соединение с базой данных
 conn.close()
+
