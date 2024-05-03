@@ -26,8 +26,10 @@ def add_data_db(telegram_id: int, new_mileage: float):
 def read_user_satistics_db(telegram_id):
     conn = sqlite3.connect('mileage.db')
     cursor = conn.cursor()
-    cursor.execute('''SELECT
-    ''')
+    cursor.execute('''SELECT day_mileage, week_mileage, month_mileage, total_mileage FROM users_mileage 
+                    WHERE telegram_id = ?''', (telegram_id,), )
+    user_statistics = cursor.fetchone()
+    return user_statistics
 
 # запрос общей статистики
 def read_all_statistics_db():

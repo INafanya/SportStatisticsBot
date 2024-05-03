@@ -1,4 +1,4 @@
-from aiogram import Router, F
+from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
@@ -51,7 +51,7 @@ async def cmd_add_statistics(
         )
         return
 
-    if new_mileage > 100:
+    if new_mileage > 200:
         await message.reply(
             "Обманщик!"
         )
@@ -62,3 +62,44 @@ async def cmd_add_statistics(
         f"Новый пробег зафиксирован\n"
         f"Итого за сегодня: {day_mileage} "
     )
+
+
+# обработчика команды /help
+@router.message(F.chat.type == "supergroup", Command("help"))
+async def cmd_help(
+        message: Message,
+):
+    await message.reply(
+        f"Добавление пробега:\n"
+        f"/newstat км.км\n"
+        f"Уменьшение пробега:\n"
+        f"/newstat -км.км\n"
+        f"Личная статистика:\n"
+        f"/mystat"
+    )
+
+
+# обработчика команды /mystat
+@router.message(Command("mystat"))
+async def cmd_user_statistics(
+        message: Message,
+        bot: Bot
+):
+    telegram_id = message.from_user.id
+    userstat = read_user_satistics_db(telegram_id)
+    day_mileage, week_mileage, month_mileage, total_mileage = userstat
+
+    await bot.send_message(telegram_id,
+                           f"Твоя статистика бега:\n"
+                           f"Дневной пробег: <b>{day_mileage}</b> км.\n"
+                           f"Недельный пробег: <b>{week_mileage}</b> км.\n"
+                           f"Месячный пробег: <b>{month_mileage}</b> км.\n"
+                           f"Общий пробег: <b>{total_mileage}</b> км."
+                           )
+
+
+@router.message(Command("test"))
+async def cmd_test(message: Message, bot: Bot):
+    telegram_id = message.from_user.id
+
+    await bot.send_message(telegram_id, 'test')
