@@ -73,7 +73,7 @@ async def cmd_help(
         f"Добавление пробега:\n"
         f"/newstat км.км\n"
         f"Уменьшение пробега:\n"
-        f"/newstat -pythonкм.км\n"
+        f"/newstat км.км\n"
         f"Личная статистика:\n"
         f"/mystat"
     )
