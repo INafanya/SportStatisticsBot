@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import *
+from Config.config_reader import admin
 
 router: Router = Router()
 
@@ -10,9 +11,11 @@ router: Router = Router()
 # Обработчик сообщения команды /start
 @router.message(F.chat.type == "private", CommandStart())
 async def command_start_handler(message: Message) -> None:
-    await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
-                         f"Личная статистика:\n /mystat")
-
+    if message.from_user.id in admin:
+        await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
+                             f"Личная статистика:\n /mystat")
+    else:
+        await message.answer(f"Эта команда для админа!")
 
 # Действие при добавлении нового участника чата
 @router.message(F.new_chat_members)
@@ -73,7 +76,7 @@ async def cmd_help(
         f"Добавление пробега:\n"
         f"/newstat км.км\n"
         f"Уменьшение пробега:\n"
-        f"/newstat км.км\n"
+        f"/newstat -км.км\n"
         f"Личная статистика:\n"
         f"/mystat"
     )
@@ -86,8 +89,8 @@ async def cmd_user_statistics(
         bot: Bot
 ):
     telegram_id = message.from_user.id
-    userstat = read_user_satistics_db(telegram_id)
-    day_mileage, week_mileage, month_mileage, total_mileage = userstat
+    # userstat = read_user_satistics_db(telegram_id)
+    day_mileage, week_mileage, month_mileage, total_mileage = read_user_satistics_db(telegram_id)
 
     await bot.send_message(telegram_id,
                            f"Твоя статистика бега:\n"
@@ -98,8 +101,9 @@ async def cmd_user_statistics(
                            )
 
 
-@router.message(Command("test"))
-async def cmd_test(message: Message, bot: Bot):
-    telegram_id = message.from_user.id
-
-    await bot.send_message(telegram_id, 'test')
+@router.message(Command("db"))
+async def cmd_create_db(message: Message):
+    copy_day_mileage_to_db
+    await message.reply(
+        f"Готово"
+    )

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from Handlers.db_handler import clear_day_mileage, clear_week_mileage, clear_month_mileage
+from Handlers.db_handler import create_sql_db, copy_and_clear_day_mileage, copy_and_clear_week_mileage, copy_and_clear_month_mileage
 from Config.config_reader import config
 from aiogram import Bot, Dispatcher
 from Handlers import other_handlers
@@ -28,13 +28,13 @@ async def main() -> None:
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
 
     # суточный таймер. Обнуляет дневной пробег каждый день в 23:57
-    scheduler.add_job(clear_day_mileage, 'cron', hour=11, minute=00, id='Clear_day')
+    scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=57, id='Clear_day')
 
     # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:58
-    scheduler.add_job(clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=58, id='Clear_week')
+    scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=58, id='Clear_week')
 
     # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
-    scheduler.add_job(clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
+    scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
 
     scheduler.start()
 
@@ -46,6 +46,10 @@ async def main() -> None:
 
     # Регистрируем обработчики(handlers)
     dp.include_router(other_handlers.router)
+
+    # проверяем на наличие БД
+    print("Проверка наличия БД")
+    create_sql_db()
 
     # Пропускаем накопившиеся апдейты телеги и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)
