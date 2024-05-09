@@ -11,6 +11,7 @@ def create_sql_db():
                     CREATE TABLE IF NOT EXISTS users_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
+                        username TEXT,
                         day_mileage FLOAT,
                         week_mileage FLOAT,
                         month_mileage FLOAT,
@@ -22,6 +23,7 @@ def create_sql_db():
                     CREATE TABLE IF NOT EXISTS day_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
+                        username TEXT,
                         date DATE,
                         day_mileage FLOAT
                     )
@@ -31,6 +33,7 @@ def create_sql_db():
                     CREATE TABLE IF NOT EXISTS week_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
+                        username TEXT,
                         week DATE,
                         week_mileage FLOAT
                     )
@@ -40,6 +43,7 @@ def create_sql_db():
                     CREATE TABLE IF NOT EXISTS month_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
+                        username TEXT,
                         month DATE,
                         month_mileage FLOAT
                     )
@@ -56,22 +60,24 @@ def create_sql_db():
 
 
 # добавление нового юзера в таблицу users_mileage
-def add_data_db(telegram_id: int, new_mileage: float):
+def add_data_db(telegram_id: int, username: str, new_mileage: float):
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
-
+        username = username
         # добавляем новую запись в таблицу users_mileage
         cursor.execute('''
             INSERT INTO users_mileage(
                         telegram_id,
+                        username,
                         day_mileage,
                         week_mileage,
                         month_mileage,
                         total_mileage)
-                        VALUES (?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         ''',
                        (telegram_id,
+                        username,
                         new_mileage,
                         new_mileage,
                         new_mileage,
@@ -92,62 +98,75 @@ def add_data_db(telegram_id: int, new_mileage: float):
 
 
 # запрос статистики по пользователю
-def read_user_satistics_db(telegram_id):
-    conn = sqlite3.connect('mileage.db')
-    cursor = conn.cursor()
-    cursor.execute('''SELECT day_mileage, week_mileage, month_mileage, total_mileage FROM users_mileage 
-                    WHERE telegram_id = ?''', (telegram_id,), )
-    user_statistics = cursor.fetchone()
+def read_user_statistics_db(telegram_id: object) -> object:
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+            username,
+            day_mileage,
+            week_mileage,
+            month_mileage,
+            total_mileage
+            FROM users_mileage 
+            WHERE telegram_id = ?
+            ''', (telegram_id,), )
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            user_statistics = cursor.fetchone()
+            conn.close()
+            print("Соединение с SQLite закрыто")
     return user_statistics
 
 
-# запрос общей статистики
-def read_all_statistics_db():
-    conn = sqlite3.connect('mileage.db')
-    cursor = conn.cursor()
-    cursor.execute('''SELECT
-        ''')
-
-
-def update_day_data_db(telegram_id: int, new_mileage: float):
-    conn = sqlite3.connect('mileage.db')
-    cursor = conn.cursor()
-
-    # получаем текущие пробеги
-    cursor.execute('''SELECT day_mileage, week_mileage, month_mileage, total_mileage FROM users_mileage
-                        WHERE telegram_id = ?''', (telegram_id,), )
-
-    # получаем результат запроса
-    result_db = cursor.fetchone()
+def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
+    # получаем результат запроса статистики пользователя
+    user_statistics = read_user_statistics_db(telegram_id)
     # проверяем есть ли пользователь в БД
-    if not result_db:
-        add_data_db(telegram_id, new_mileage)
+    if not user_statistics:
+        add_data_db(telegram_id, username, new_mileage)
     else:
         # обновляем дневной пробег пользователя
-        day_mileage, week_mileage, month_mileage, total_mileage = result_db
+        username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
         day_mileage += new_mileage
         week_mileage += new_mileage
         month_mileage += new_mileage
         total_mileage += new_mileage
-
-        cursor.execute('''
-            UPDATE users_mileage SET 
+        try:
+            conn = sqlite3.connect('mileage.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE users_mileage 
+                SET 
+                username = ?,
                 day_mileage = ?,
                 week_mileage = ?,
                 month_mileage = ?,
                 total_mileage = ?
                 WHERE 
-                telegram_id = ?''',
-                       (day_mileage,
-                        week_mileage,
-                        month_mileage,
-                        total_mileage,
-                        telegram_id))
-        conn.commit()
+                telegram_id = ?
+                ''',
+                           (username,
+                            day_mileage,
+                            week_mileage,
+                            month_mileage,
+                            total_mileage,
+                            telegram_id)
+                           )
+            conn.commit()
+        except sqlite3.Error as error:
+            print("Ошибка при работе с SQLite", error)
 
-        # закрываем соединение с базой данных
-        conn.close()
-        return day_mileage
+        finally:
+            if conn:
+                conn.close()
+                print("Соединение с SQLite закрыто")
+            return day_mileage
 
 
 # копирование и отчистка дневной статистики
@@ -160,7 +179,9 @@ def copy_and_clear_day_mileage():
         print("Сохраняю дневную статистику")
         # копируем дневную статистику в таблицу day_mileage
         cursor.execute('''
-            SELECT telegram_id,
+            SELECT 
+            telegram_id,
+            username,
             strftime('%d.%m.%Y', datetime('now')) as date,
             day_mileage
             FROM users_mileage
@@ -169,8 +190,8 @@ def copy_and_clear_day_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO day_mileage
-                        (telegram_id , date, day_mileage)
-                        VALUES (?, ?, ?)'''
+                        (telegram_id , username, date, day_mileage)
+                        VALUES (?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
@@ -205,7 +226,9 @@ def copy_and_clear_week_mileage():
         print("Сохраняю недельную статистику")
         # копируем недельную статистику в таблицу week_mileage
         cursor.execute('''
-                    SELECT telegram_id,
+                    SELECT
+                    telegram_id,
+                    usernsme,
                     strftime('%W', datetime('now')) as date,
                     week_mileage
                     FROM users_mileage
@@ -214,8 +237,8 @@ def copy_and_clear_week_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO week_mileage
-                                (telegram_id , week, week_mileage)
-                                VALUES (?, ?, ?)'''
+                       (telegram_id , username, week, week_mileage)
+                       VALUES (?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
@@ -246,7 +269,9 @@ def copy_and_clear_month_mileage():
         print("Сохраняю месячную статистику")
         # копируем месячную статистику в таблицу month_mileage
         cursor.execute('''
-                    SELECT telegram_id,
+                    SELECT 
+                    telegram_id,
+                    username,
                     strftime('%m', datetime('now')) as date,
                     month_mileage
                     FROM users_mileage
@@ -255,8 +280,8 @@ def copy_and_clear_month_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO month_mileage
-                                (telegram_id , month, month_mileage)
-                                VALUES (?, ?, ?)'''
+                                (telegram_id , username, month, month_mileage)
+                                VALUES (?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
@@ -275,3 +300,30 @@ def copy_and_clear_month_mileage():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
+
+
+# функция
+def show_day_rating():
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        print("Подключение к SQLite успешно")
+
+        cursor.execute('''
+            SELECT 
+            telegram_id,
+            username,
+            day_mileage
+            FROM day_mileage
+            ''')
+
+        day_rating = cursor.fetchall()
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            conn.close()
+            print("Соединение с SQLite закрыто")
+        return day_rating

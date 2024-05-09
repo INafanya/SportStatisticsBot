@@ -1,6 +1,9 @@
+from datetime import datetime
+from time import strftime
+
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import Message, user
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import *
 from Config.config_reader import admin
@@ -16,6 +19,7 @@ async def command_start_handler(message: Message) -> None:
                              f"Личная статистика:\n /mystat")
     else:
         await message.answer(f"Эта команда для админа!")
+
 
 # Действие при добавлении нового участника чата
 @router.message(F.new_chat_members)
@@ -39,7 +43,7 @@ async def cmd_add_statistics(
 ):
     # Объявляем переменные:
     telegram_id = message.from_user.id
-
+    username = message.from_user.full_name
     # Обработка ошибок ввода пробега
     try:
         new_mileage = float(command.args)
@@ -60,7 +64,7 @@ async def cmd_add_statistics(
         )
         return
 
-    day_mileage = update_day_data_db(telegram_id, new_mileage)
+    day_mileage = update_day_data_db(telegram_id, username, new_mileage)
     await message.reply(
         f"Новый пробег зафиксирован\n"
         f"Итого за сегодня: {day_mileage} "
@@ -89,21 +93,39 @@ async def cmd_user_statistics(
         bot: Bot
 ):
     telegram_id = message.from_user.id
-    # userstat = read_user_satistics_db(telegram_id)
-    day_mileage, week_mileage, month_mileage, total_mileage = read_user_satistics_db(telegram_id)
+    user_statistics = read_user_statistics_db(telegram_id)
+    if user_statistics:
+        username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
 
-    await bot.send_message(telegram_id,
-                           f"Твоя статистика бега:\n"
-                           f"Дневной пробег: <b>{day_mileage}</b> км.\n"
-                           f"Недельный пробег: <b>{week_mileage}</b> км.\n"
-                           f"Месячный пробег: <b>{month_mileage}</b> км.\n"
-                           f"Общий пробег: <b>{total_mileage}</b> км."
-                           )
+        await bot.send_message(telegram_id,
+                               f"Твоя статистика бега:\n"
+                               f"Дневной пробег: <b>{day_mileage}</b> км.\n"
+                               f"Недельный пробег: <b>{week_mileage}</b> км.\n"
+                               f"Месячный пробег: <b>{month_mileage}</b> км.\n"
+                               f"Общий пробег: <b>{total_mileage}</b> км."
+                               )
+    else:
+        await bot.send_message(telegram_id,
+                               f"Сначала добавь пробег"
+                               )
 
 
-@router.message(Command("db"))
-async def cmd_create_db(message: Message):
-    copy_day_mileage_to_db
-    await message.reply(
-        f"Готово"
-    )
+# отправка дневного рейтинга в общий чат
+@router.message(F.chat.type == "supergroup")
+async def show_day_rating2(
+        message: Message,
+        bot: Bot
+):
+    day_rating = show_day_rating()
+
+    await bot.send_message(f"#Итог дня {strftime('%d.%m.%Y', datetime('now'))}"
+                           f"{day_rating}")
+
+
+@router.message(Command("day_rating"))
+async def show_day_rating(message: Message):
+    await show_day_rating()
+    day_rating = show_day_rating()
+
+    await message.reply(f"#Итог дня {strftime('%d.%m.%Y', datetime('now'))}"
+                        f"{day_rating}")
