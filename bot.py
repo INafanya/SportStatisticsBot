@@ -35,7 +35,7 @@ async def main() -> None:
     scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=58, id='Clear_week')
 
     # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
-    scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=59)
+    scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=59, id='Clear_month')
 
     scheduler.start()
 

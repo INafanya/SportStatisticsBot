@@ -111,21 +111,24 @@ async def cmd_user_statistics(
 
 
 # отправка дневного рейтинга в общий чат
-@router.message(F.chat.type == "supergroup")
-async def show_day_rating2(
+
+@router.message(F.chat.type == "supergroup", Command("day"))
+async def cmd_day_rating(
         message: Message,
-        bot: Bot
 ):
-    day_rating = show_day_rating()
+    day_now = datetime.now()
+    day_rating = read_day_rating()
+    first, second, third, fourth, fifth, end_first, end_second, end_third, users_sum = day_rating
 
-    await bot.send_message(f"#Итог дня {strftime('%d.%m.%Y', datetime('now'))}"
-                           f"{day_rating}")
-
-
-@router.message(Command("day_rating"))
-async def show_day_rating(message: Message):
-    await show_day_rating()
-    day_rating = show_day_rating()
-
-    await message.reply(f"#Итог дня {strftime('%d.%m.%Y', datetime('now'))}"
-                        f"{day_rating}")
+    await message.reply(f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
+                        f"\n"
+                        f"1. {first[1]} - {first[2]} км.\n"
+                        f"2. {second[1]} - {second[2]} км.\n"
+                        f"3. {third[1]} - {third[2]} км.\n"
+                        f"4. {fourth[1]} - {fourth[2]} км.\n"
+                        f"5. {fifth[1]} - {fifth[2]} км.\n"
+                        f"...\n"
+                        f"{users_sum[0] - 2}. {end_first[1]} - {end_first[2]} км.\n"
+                        f"{users_sum[0] - 1}. {end_second[1]} - {end_second[2]} км.\n"
+                        f"{users_sum[0]}. {end_third[1]} - {end_third[2]} км."
+    )
