@@ -10,6 +10,8 @@ from Config.config_reader import admin
 
 router: Router = Router()
 
+chat_id = -1002119719477
+
 
 # Обработчик сообщения команды /start
 @router.message(F.chat.type == "private", CommandStart())
@@ -115,20 +117,101 @@ async def cmd_user_statistics(
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(
         message: Message,
+        bot: Bot
 ):
-    day_now = datetime.now()
-    day_rating = read_day_rating()
-    first, second, third, fourth, fifth, end_first, end_second, end_third, users_sum = day_rating
+    try:
+        day_now = datetime.now()
+        day_rating = read_day_rating()
+        text_answer = ""
 
-    await message.reply(f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
-                        f"\n"
-                        f"1. {first[1]} - {first[2]} км.\n"
-                        f"2. {second[1]} - {second[2]} км.\n"
-                        f"3. {third[1]} - {third[2]} км.\n"
-                        f"4. {fourth[1]} - {fourth[2]} км.\n"
-                        f"5. {fifth[1]} - {fifth[2]} км.\n"
-                        f"...\n"
-                        f"{users_sum[0] - 2}. {end_first[1]} - {end_first[2]} км.\n"
-                        f"{users_sum[0] - 1}. {end_second[1]} - {end_second[2]} км.\n"
-                        f"{users_sum[0]}. {end_third[1]} - {end_third[2]} км."
-    )
+        if len(day_rating) == 1:
+            print(len(day_rating))
+            print(day_rating)
+
+            for (index, i) in enumerate(day_rating):
+                text_answer += f"{index + 1}. {day_rating[0][index][1]} - {day_rating[0][index][2]} км.\n"
+            print(text_answer)
+
+        else:
+            winners, loosers, users_summ = read_day_rating()
+            loosers_index = users_summ[0][0] - 2
+
+            for (index, i) in enumerate(winners):
+                text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
+
+            text_answer += f"...\n"
+
+            for (index, i) in enumerate(loosers):
+                text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
+                loosers_index += 1
+    except IndexError:
+        text_answer = f'Нет пробега за эту дату'
+
+    await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
+                                    f"\n"
+                                    f"{text_answer}"
+
+                           )
+
+
+@router.message(F.chat.type == "supergroup", Command("test"))
+async def cmd_day_rating_test(
+        message: Message,
+        bot: Bot
+):
+    try:
+        day_now = datetime.now()
+        day_rating = read_day_rating()
+        text_answer = ""
+
+        if len(day_rating) == 1:
+            print(len(day_rating))
+            print(day_rating)
+
+            for (index, i) in enumerate(day_rating):
+                text_answer += f"{index + 1}. {day_rating[0][index][1]} - {day_rating[0][index][2]} км.\n"
+            print(text_answer)
+
+        else:
+            winners, loosers, users_summ = read_day_rating()
+            loosers_index = users_summ[0][0] - 2
+
+            for (index, i) in enumerate(winners):
+
+                text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
+
+            text_answer += f"...\n"
+
+            for (index, i) in enumerate(loosers):
+
+                text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
+                loosers_index += 1
+    except IndexError:
+        text_answer = f'Нет пробега за эту дату'
+
+    await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
+                                    f"\n"
+                                    f"{text_answer}"
+
+                           )
+'''
+    day_rating = read_day_rating()
+    day_now = datetime.now()
+    users_summ = day_rating[-1][0] - 3
+    text_answer = ""
+
+    for (index, i) in enumerate(day_rating):
+        if len(day_rating) - 1 >= index >= len(day_rating) - 4:
+            break
+        text_answer += f"{index + 1}. {day_rating[index][1]} - {day_rating[index][2]} км.\n"
+
+    for (index, i) in enumerate(day_rating):
+        if len(day_rating) - 1 > index >= len(day_rating) - 4:
+            text_answer += f"{index + 1}. {day_rating[index][1]} - {day_rating[index][2]} км.\n"
+
+    await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
+                                    f"\n"
+                                    f"{text_answer}"
+
+                           )
+'''

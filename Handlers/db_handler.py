@@ -49,7 +49,7 @@ def create_sql_db():
                     )
                     ''')
         # print("Создана таблица month_mileage")
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -113,7 +113,7 @@ def read_user_statistics_db(telegram_id: object) -> object:
             FROM users_mileage 
             WHERE telegram_id = ?
             ''', (telegram_id,), )
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -161,7 +161,7 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
                             telegram_id)
                            )
             conn.commit()
-            cursor.close()
+            #cursor.close()
 
         except sqlite3.Error as error:
             print("Ошибка при работе с SQLite", error)
@@ -210,7 +210,7 @@ def copy_and_clear_day_mileage():
             ''')
         conn.commit()
         print("Обнуление дневной статистики завершено")
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -254,7 +254,7 @@ def copy_and_clear_week_mileage():
 
         # сохраняем изменения в базе данных
         conn.commit()
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -298,7 +298,7 @@ def copy_and_clear_month_mileage():
 
         # сохраняем изменения в базе данных
         conn.commit()
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -325,32 +325,48 @@ def read_day_rating():
 
         users_sum = cursor.fetchall()
 
-        cursor.execute('''
-            SELECT 
-            telegram_id,
-            username,
-            day_mileage
-            FROM day_mileage
-            WHERE date == strftime('%d.%m.%Y', datetime('now'))
-            ORDER BY day_mileage DESC
-            LIMIT 5
-            ''')
+        if users_sum[0][0] <= 8:
+            cursor.execute('''
+                            SELECT 
+                            telegram_id,
+                            username,
+                            day_mileage
+                            FROM day_mileage
+                            WHERE date == strftime('%d.%m.%Y', datetime('now'))
+                            ORDER BY day_mileage DESC
+                            ''')
+            #result = cursor.fetchall()
+            result = [cursor.fetchall()]
 
-        winners = cursor.fetchall()
+        else:
+            cursor.execute('''
+                SELECT 
+                telegram_id,
+                username,
+                day_mileage
+                FROM day_mileage
+                WHERE date == strftime('%d.%m.%Y', datetime('now'))
+                ORDER BY day_mileage DESC
+                LIMIT 5
+                ''')
 
-        cursor.execute('''
-                    SELECT 
-                    telegram_id,
-                    username,
-                    day_mileage
-                    FROM day_mileage
-                    WHERE day_mileage > 0 AND date == strftime('%d.%m.%Y', datetime('now'))
-                    ORDER BY day_mileage ASC
-                    LIMIT 3
-                    ''')
-        loosers = cursor.fetchall()
+            winners = cursor.fetchall()
 
-        cursor.close()
+            cursor.execute('''
+                        SELECT 
+                        telegram_id,
+                        username,
+                        day_mileage
+                        FROM day_mileage
+                        WHERE day_mileage > 0 AND date == strftime('%d.%m.%Y', datetime('now'))
+                        ORDER BY day_mileage ASC
+                        LIMIT 3
+                        ''')
+            loosers = cursor.fetchall()
+
+            #result = winners + loosers[::-1] + users_sum
+            result = [winners, loosers[::-1],users_sum]
+            #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -359,7 +375,7 @@ def read_day_rating():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
-        return winners + loosers[::-1] + users_sum
+        return result
 
 
 def read_week_rating():
@@ -400,7 +416,7 @@ def read_week_rating():
                     ''')
         loosers = cursor.fetchall()
 
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -450,7 +466,7 @@ def read_month_rating():
                     ''')
         loosers = cursor.fetchall()
 
-        cursor.close()
+        #cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
