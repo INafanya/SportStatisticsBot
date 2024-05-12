@@ -28,8 +28,8 @@ async def chat_user_added(message: Message):
     for user in message.new_chat_members:
         content = Text(
             "Привет, ",
-            Bold(user.full_name),". "
-            "Справка по боту: /help"
+            Bold(user.full_name), ". "
+                                  "Справка по боту: /help"
         )
         await message.reply(
             **content.as_kwargs()
@@ -103,17 +103,19 @@ async def cmd_user_statistics(
     if user_statistics:
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
 
-        await bot.send_message(telegram_id,
-                               f"Твоя статистика бега:\n"
-                               f"Дневной пробег: <b>{day_mileage}</b> км.\n"
-                               f"Недельный пробег: <b>{week_mileage}</b> км.\n"
-                               f"Месячный пробег: <b>{month_mileage}</b> км.\n"
-                               f"Общий пробег: <b>{total_mileage}</b> км."
-                               )
+        await bot.send_message(
+            telegram_id,
+            f"Твоя статистика бега:\n"
+            f"Дневной пробег: <b>{day_mileage}</b> км.\n"
+            f"Недельный пробег: <b>{week_mileage}</b> км.\n"
+            f"Месячный пробег: <b>{month_mileage}</b> км.\n"
+            f"Общий пробег: <b>{total_mileage}</b> км."
+        )
     else:
-        await bot.send_message(telegram_id,
-                               f"Сначала добавь пробег"
-                               )
+        await bot.send_message(
+            telegram_id,
+            f"Сначала добавь пробег"
+        )
 
 
 # отправка дневного рейтинга в общий чат
@@ -129,12 +131,9 @@ async def cmd_day_rating(
         text_answer = ""
 
         if len(day_rating) == 1:
-            print(len(day_rating))
-            print(day_rating)
 
             for (index, i) in enumerate(day_rating):
                 text_answer += f"{index + 1}. {day_rating[0][index][1]} - {day_rating[0][index][2]} км.\n"
-            print(text_answer)
 
         else:
             winners, loosers, users_summ = read_day_rating()
@@ -151,11 +150,12 @@ async def cmd_day_rating(
     except IndexError:
         text_answer = f'Нет пробега за эту дату'
 
-    await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
-                                    f"\n"
-                                    f"{text_answer}"
-
-                           )
+    await bot.send_message(
+        chat_id,
+        f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
+        f"\n"
+        f"{text_answer}"
+    )
 
 
 @router.message(F.chat.type == "supergroup", Command("test"))
@@ -181,13 +181,11 @@ async def cmd_day_rating_test(
             loosers_index = users_summ[0][0] - 2
 
             for (index, i) in enumerate(winners):
-
                 text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
 
             text_answer += f"...\n"
 
             for (index, i) in enumerate(loosers):
-
                 text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
                 loosers_index += 1
     except IndexError:
@@ -198,24 +196,3 @@ async def cmd_day_rating_test(
                                     f"{text_answer}"
 
                            )
-'''
-    day_rating = read_day_rating()
-    day_now = datetime.now()
-    users_summ = day_rating[-1][0] - 3
-    text_answer = ""
-
-    for (index, i) in enumerate(day_rating):
-        if len(day_rating) - 1 >= index >= len(day_rating) - 4:
-            break
-        text_answer += f"{index + 1}. {day_rating[index][1]} - {day_rating[index][2]} км.\n"
-
-    for (index, i) in enumerate(day_rating):
-        if len(day_rating) - 1 > index >= len(day_rating) - 4:
-            text_answer += f"{index + 1}. {day_rating[index][1]} - {day_rating[index][2]} км.\n"
-
-    await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
-                                    f"\n"
-                                    f"{text_answer}"
-
-                           )
-'''

@@ -1,4 +1,5 @@
 import sqlite3
+from Handlers.other_handlers import cmd_day_rating
 
 
 # создание БД
@@ -211,7 +212,7 @@ def copy_and_clear_day_mileage():
             ''')
         conn.commit()
         print("Обнуление дневной статистики завершено")
-        #cursor.close()
+
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -220,6 +221,7 @@ def copy_and_clear_day_mileage():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
+            cmd_day_rating()
 
 
 # отчистка недельной статистики
