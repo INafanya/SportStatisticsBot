@@ -125,13 +125,14 @@ def read_user_statistics_db(telegram_id: object) -> object:
             print("Соединение с SQLite закрыто")
     return user_statistics
 
-
+# обновление дневного пробега в БД
 def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     # получаем результат запроса статистики пользователя
     user_statistics = read_user_statistics_db(telegram_id)
-    # проверяем есть ли пользователь в БД
+    # проверяем есть ли пользователь в БД, если нет добавляем пользователя в БД
     if not user_statistics:
         add_data_db(telegram_id, username, new_mileage)
+        return new_mileage
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics

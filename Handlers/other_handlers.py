@@ -1,9 +1,8 @@
 from datetime import datetime
-from time import strftime
 
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
-from aiogram.types import Message, user
+from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import *
 from Config.config_reader import admin
@@ -29,7 +28,7 @@ async def chat_user_added(message: Message):
     for user in message.new_chat_members:
         content = Text(
             "Привет, ",
-            Bold(user.full_name),
+            Bold(user.full_name),". "
             "Справка по боту: /help"
         )
         await message.reply(
@@ -49,17 +48,20 @@ async def cmd_add_statistics(
     # Обработка ошибок ввода пробега
     try:
         new_mileage = float(command.args)
+
+    # пробег число?
     except ValueError:
         await message.reply(
             "Укажите пробег числом"
         )
         return
+    # пробег указан после команды?
     except TypeError:
         await message.reply(
             "Укажите пробег"
         )
         return
-
+    # нереальный дневной пробег
     if new_mileage > 200:
         await message.reply(
             "Обманщик!"
@@ -67,6 +69,7 @@ async def cmd_add_statistics(
         return
 
     day_mileage = update_day_data_db(telegram_id, username, new_mileage)
+
     await message.reply(
         f"Новый пробег зафиксирован\n"
         f"Итого за сегодня: {day_mileage} "
@@ -96,6 +99,7 @@ async def cmd_user_statistics(
 ):
     telegram_id = message.from_user.id
     user_statistics = read_user_statistics_db(telegram_id)
+
     if user_statistics:
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
 
