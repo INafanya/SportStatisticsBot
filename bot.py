@@ -3,11 +3,13 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from Handlers.db_handler import create_sql_db
 from Handlers.db_handler import copy_and_clear_day_mileage, copy_and_clear_week_mileage, copy_and_clear_month_mileage
-from Config.config_reader import config
+from Config.config_reader import config, chat_id
 from aiogram import Bot, Dispatcher
 from Handlers import other_handlers
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+
+from Handlers.other_handlers import cmd_day_rating, cmd_day_rating_test
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
@@ -19,27 +21,13 @@ async def main() -> None:
     # конфигурируем логирование
     logging.basicConfig(
         level=logging.INFO,
-        format='%(filename)s:@(lineno)d #%(levelname)-8s '
-               '[%(asctime)s] - %(name)s - %(message)s',
-        filename='bot.log',
-        filemode='w'
+       # format='%(filename)s:@(lineno)d #%(levelname)-8s '
+        #       '[%(asctime)s] - %(name)s - %(message)s'#,
+        format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s'
     )
+
     # Выводим в консоль старт бота
     logger.info('Starting SportStatisticBot...')
-
-    # Инициализируем планировщик
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-
-    # суточный таймер. Обнуляет дневной пробег каждый день в 23:57
-    scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=00, id='Clear_day')
-
-    # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:58
-    scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=58, id='Clear_week')
-
-    # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
-    scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=59, id='Clear_month')
-
-    scheduler.start()
 
     # Initialize Bot instance with default bot properties which will be passed to all API calls
     bot = Bot(
@@ -50,6 +38,21 @@ async def main() -> None:
     # Регистрируем обработчики(handlers)
     dp.include_router(other_handlers.router)
 
+    if __name__ == '__main__':
+        # Инициализируем планировщик
+        scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+        # суточный таймер. Обнуляет дневной пробег каждый день в 23:57
+        scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=50)
+
+        scheduler.add_job(cmd_day_rating, 'cron', hour=8, minute=0, args=(bot,))
+
+        # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:58
+        scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=52)
+
+        # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
+        scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=54)
+
+        scheduler.start()
     # проверяем на наличие БД
     print("Проверка наличия БД")
     create_sql_db()

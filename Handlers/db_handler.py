@@ -1,5 +1,5 @@
 import sqlite3
-from Handlers.other_handlers import cmd_day_rating
+from datetime import datetime, timedelta
 
 
 # создание БД
@@ -50,7 +50,7 @@ def create_sql_db():
                     )
                     ''')
         # print("Создана таблица month_mileage")
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -100,7 +100,7 @@ def add_data_db(telegram_id: int, username: str, new_mileage: float):
 
 
 # запрос статистики по пользователю
-def read_user_statistics_db(telegram_id: object) -> object:
+def read_user_statistics_from_db(telegram_id: int):
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
@@ -114,7 +114,7 @@ def read_user_statistics_db(telegram_id: object) -> object:
             FROM users_mileage 
             WHERE telegram_id = ?
             ''', (telegram_id,), )
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -124,12 +124,13 @@ def read_user_statistics_db(telegram_id: object) -> object:
             user_statistics = cursor.fetchone()
             conn.close()
             print("Соединение с SQLite закрыто")
-    return user_statistics
+            return user_statistics
+
 
 # обновление дневного пробега в БД
 def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     # получаем результат запроса статистики пользователя
-    user_statistics = read_user_statistics_db(telegram_id)
+    user_statistics = read_user_statistics_from_db(telegram_id)
     # проверяем есть ли пользователь в БД, если нет добавляем пользователя в БД
     if not user_statistics:
         add_data_db(telegram_id, username, new_mileage)
@@ -163,7 +164,7 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
                             telegram_id)
                            )
             conn.commit()
-            #cursor.close()
+            # cursor.close()
 
         except sqlite3.Error as error:
             print("Ошибка при работе с SQLite", error)
@@ -221,7 +222,7 @@ def copy_and_clear_day_mileage():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
-            cmd_day_rating()
+            # cmd_day_rating()
 
 
 # отчистка недельной статистики
@@ -257,7 +258,7 @@ def copy_and_clear_week_mileage():
 
         # сохраняем изменения в базе данных
         conn.commit()
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -301,7 +302,7 @@ def copy_and_clear_month_mileage():
 
         # сохраняем изменения в базе данных
         conn.commit()
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -318,16 +319,16 @@ def read_day_rating():
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
         print("Подключение к SQLite успешно")
-
+        yesterday = get_yesterday()
         cursor.execute('''
                     SELECT 
                     COUNT(telegram_id)
                     FROM day_mileage
-                    WHERE date == strftime('%d.%m.%Y', datetime('now'))
-                    ''')
+                    WHERE date = ?
+                    ''', (yesterday,), )
 
         users_sum = cursor.fetchall()
-
+        print(f"users_sum:{users_sum}")
         if users_sum[0][0] <= 8:
             cursor.execute('''
                             SELECT 
@@ -335,12 +336,12 @@ def read_day_rating():
                             username,
                             day_mileage
                             FROM day_mileage
-                            WHERE date == strftime('%d.%m.%Y', datetime('now'))
+                            WHERE date = ?
                             ORDER BY day_mileage DESC
-                            ''')
-            #result = cursor.fetchall()
-            result = [cursor.fetchall()]
+                            ''', (yesterday,), )
 
+            result = [cursor.fetchall()]
+            print(f"users < 8, result:{result}")
         else:
             cursor.execute('''
                 SELECT 
@@ -348,28 +349,29 @@ def read_day_rating():
                 username,
                 day_mileage
                 FROM day_mileage
-                WHERE date == strftime('%d.%m.%Y', datetime('now'))
+                WHERE date = ?
                 ORDER BY day_mileage DESC
                 LIMIT 5
-                ''')
+                ''', (yesterday,), )
 
             winners = cursor.fetchall()
-
+            print(f"users > 8, winners:{winners}")
             cursor.execute('''
                         SELECT 
                         telegram_id,
                         username,
                         day_mileage
                         FROM day_mileage
-                        WHERE day_mileage > 0 AND date == strftime('%d.%m.%Y', datetime('now'))
+                        WHERE day_mileage > 0 AND date = ?
                         ORDER BY day_mileage ASC
                         LIMIT 3
-                        ''')
+                        ''', (yesterday,), )
             loosers = cursor.fetchall()
-
-            #result = winners + loosers[::-1] + users_sum
-            result = [winners, loosers[::-1],users_sum]
-            #cursor.close()
+            print(f"users > 8, loosers:{loosers}")
+            # result = winners + loosers[::-1] + users_sum
+            result = [winners, loosers[::-1], users_sum]
+            print(f"users > 8, result:{loosers}")
+            # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -419,7 +421,7 @@ def read_week_rating():
                     ''')
         loosers = cursor.fetchall()
 
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -469,7 +471,7 @@ def read_month_rating():
                     ''')
         loosers = cursor.fetchall()
 
-        #cursor.close()
+        # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -479,3 +481,10 @@ def read_month_rating():
             conn.close()
             print("Соединение с SQLite закрыто")
         return winners + loosers[::-1] + users_sum
+
+def get_yesterday():
+    date_format = '%d.%m.%Y'
+    today = datetime.now()
+    yesterday = today - timedelta(days=1)
+    yesterday_format = yesterday.strftime(date_format)
+    return yesterday_format

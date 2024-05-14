@@ -20,3 +20,5 @@ class Settings(BaseSettings):
 config = Settings()
 
 admin = (1060800091, 1060800092)
+
+chat_id = -1002119719477
