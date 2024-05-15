@@ -9,7 +9,7 @@ from Handlers import other_handlers
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from Handlers.other_handlers import show_day_rating
+from Handlers.other_handlers import show_day_rating, show_week_rating
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ async def main() -> None:
 
         # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
         scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
+        scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=5, args=(bot,))
 
         # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
         # переделать под 4-х недельный таймер
