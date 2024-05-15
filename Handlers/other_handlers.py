@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
-
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message
 from aiogram.utils.formatting import Text, Bold
-from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating
+
+from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating
 from Config.config_reader import admin, chat_id
 
 router: Router = Router()
@@ -27,8 +27,8 @@ async def chat_user_added(message: Message):
         content = Text(
             "Привет, ",
             Bold(user.full_name), ". "
+                                  "Для работы с ботом нажми Start тут: https://t.me/SportStatistics_bot"
                                   "Справка по боту: /помощь"
-                                  "Для работы с ботом нажми https://t.me/SportStatistics_bot"
         )
         await message.reply(
             **content.as_kwargs()
@@ -71,7 +71,7 @@ async def cmd_add_statistics(
 
     await message.reply(
         f"Новый пробег зафиксирован\n"
-        f"Итого за сегодня: {day_mileage} "
+        f"Итого за сегодня: {round(day_mileage, 2)} "
     )
 
 
@@ -81,7 +81,7 @@ async def cmd_help(
         message: Message,
 ):
     await message.reply(
-        f"Для работы с ботом нажми https://t.me/SportStatistics_bot\n"
+        f"Бот: https://t.me/SportStatistics_bot\n"
         f"Добавление пробега:\n"
         f"/д км.км\n"
         f"Уменьшение пробега:\n"
@@ -106,10 +106,10 @@ async def cmd_user_statistics(
         await bot.send_message(
             telegram_id,
             f"Твоя статистика бега:\n"
-            f"Дневной пробег: <b>{day_mileage}</b> км.\n"
-            f"Недельный пробег: <b>{week_mileage}</b> км.\n"
-            f"Месячный пробег: <b>{month_mileage}</b> км.\n"
-            f"Общий пробег: <b>{total_mileage}</b> км."
+            f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км.\n"
+            f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км.\n"
+            f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км.\n"
+            f"Общий пробег: <b>{round(total_mileage, 2)}</b> км."
         )
     else:
         await bot.send_message(
@@ -121,75 +121,48 @@ async def cmd_user_statistics(
 # отправка дневного рейтинга в общий чат
 
 # @router.message(F.chat.type == "supergroup", Command("day"))
-async def cmd_day_rating(bot: Bot
+async def show_day_rating(bot: Bot
                          ):
     try:
         day_rating = read_day_rating()
         text_answer = ""
-
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')
         if len(day_rating) == 1:
 
             for (index, i) in enumerate(day_rating[0]):
-                text_answer += f"{index + 1}. {day_rating[0][index][1]} - {day_rating[0][index][2]} км.\n"
+                float_day_rating = round(float(str(day_rating[0][index][2]).replace(',', '.')), 2)
+                text_answer += f"{index + 1}. {day_rating[0][index][1]} - {float_day_rating} км.\n"
 
         else:
             winners, loosers, users_summ = read_day_rating()
             loosers_index = users_summ[0][0] - 2
 
             for (index, i) in enumerate(winners):
-                text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
+                float_winners = round(float(str(winners[index][2]).replace(',', '.')), 2)
+                text_answer += f"{index + 1}. {winners[index][1]} - {float_winners} км.\n"
 
             text_answer += f"...\n"
 
             for (index, i) in enumerate(loosers):
-                text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
+                float_looser = round(float(str(loosers[index][2]).replace(',', '.')), 2)
+                text_answer += f"{loosers_index}. {loosers[index][1]} - {float_looser} км.\n"
                 loosers_index += 1
 
     except IndexError:
-        text_answer = f'Нет пробега за эту дату'
+        text_answer = f'Нет пробега за {yesterday}'
 
     await bot.send_message(
         chat_id,
-        f"#Итог дня {(datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')}\n"
+        f"#Итог дня {yesterday}\n"
         f"\n"
         f"{text_answer}"
     )
 
 
 @router.message(F.chat.type == "supergroup", Command("day"))
-async def cmd_day_rating_admin(message: Message, bot: Bot
+async def cmd_day_rating(message: Message, bot: Bot
                                ):
-    try:
-        day_rating = read_day_rating()
-        text_answer = ""
-        check_for_empty_mileage_in_db = day_rating[0][0]
-        if len(day_rating) == 1:
-
-            for (index, i) in enumerate(day_rating[0]):
-                text_answer += f"{index + 1}. {day_rating[0][index][1]} - {day_rating[0][index][2]} км.\n"
-
-        else:
-            winners, loosers, users_summ = read_day_rating()
-            loosers_index = users_summ[0][0] - 2
-
-            for (index, i) in enumerate(winners):
-                text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
-
-            text_answer += f"...\n"
-
-            for (index, i) in enumerate(loosers):
-                text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
-                loosers_index += 1
-
-    except IndexError:
-        text_answer = f'Нет пробега за эту дату'
-
-    await bot.send_message(
-        chat_id,
-        f"#Итог дня {(datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')}\n"
-        f"\n"
-        f"{text_answer}"
-    )
+    await show_day_rating()
 
 
 @router.message(F.chat.type == "supergroup", Command("test"))

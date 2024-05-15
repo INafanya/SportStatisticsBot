@@ -222,8 +222,6 @@ def copy_and_clear_day_mileage():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
-            # cmd_day_rating()
-
 
 # отчистка недельной статистики
 def copy_and_clear_week_mileage():
@@ -368,10 +366,8 @@ def read_day_rating():
                         ''', (yesterday,), )
             loosers = cursor.fetchall()
             print(f"users > 8, loosers:{loosers}")
-            # result = winners + loosers[::-1] + users_sum
             result = [winners, loosers[::-1], users_sum]
             print(f"users > 8, result:{loosers}")
-            # cursor.close()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -384,55 +380,71 @@ def read_day_rating():
 
 
 def read_week_rating():
-    try:
-        conn = sqlite3.connect('mileage.db')
-        cursor = conn.cursor()
-        print("Подключение к SQLite успешно")
+        try:
+            conn = sqlite3.connect('mileage.db')
+            cursor = conn.cursor()
+            print("Подключение к SQLite успешно")
+            yesterweek = get_yesterweek()
+            cursor.execute('''
+                        SELECT 
+                        COUNT(telegram_id)
+                        FROM week_mileage
+                        WHERE week = ?
+                        ''', (yesterweek,), )
 
-        cursor.execute('''
-                    SELECT 
-                    COUNT(telegram_id)
-                    FROM week_mileage
-                    ''')
+            users_sum = cursor.fetchall()
+            print(f"users_sum:{users_sum}")
+            if users_sum[0][0] <= 8:
+                cursor.execute('''
+                                SELECT 
+                                telegram_id,
+                                username,
+                                week_mileage
+                                FROM week_mileage
+                                WHERE week = ?
+                                ORDER BY week_mileage DESC
+                                ''', (yesterweek,), )
 
-        users_sum = cursor.fetchall()
-
-        cursor.execute('''
-            SELECT 
-            telegram_id,
-            username,
-            week_mileage
-            FROM week_mileage
-            ORDER BY week_mileage DESC
-            LIMIT 5
-            ''')
-
-        winners = cursor.fetchall()
-
-        cursor.execute('''
+                result = [cursor.fetchall()]
+                print(f"users < 8, result:{result}")
+            else:
+                cursor.execute('''
                     SELECT 
                     telegram_id,
                     username,
                     week_mileage
                     FROM week_mileage
-                    WHERE week_mileage > 0
-                    ORDER BY week_mileage ASC
-                    LIMIT 3
-                    ''')
-        loosers = cursor.fetchall()
+                    WHERE week = ?
+                    ORDER BY week_mileage DESC
+                    LIMIT 5
+                    ''', (yesterweek,), )
 
-        # cursor.close()
+                winners = cursor.fetchall()
+                print(f"users > 8, winners:{winners}")
+                cursor.execute('''
+                            SELECT 
+                            telegram_id,
+                            username,
+                            week_mileage
+                            FROM week_mileage
+                            WHERE week_mileage > 0 AND date = ?
+                            ORDER BY week_mileage ASC
+                            LIMIT 3
+                            ''', (yesterweek,), )
+                loosers = cursor.fetchall()
+                print(f"users > 8, loosers:{loosers}")
+                result = [winners, loosers[::-1], users_sum]
+                print(f"users > 8, result:{loosers}")
+                # cursor.close()
 
-    except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
+        except sqlite3.Error as error:
+            print("Ошибка при работе с SQLite", error)
 
-    finally:
-        if conn:
-            conn.close()
-            print("Соединение с SQLite закрыто")
-        return winners + loosers[::-1] + users_sum
-
-
+        finally:
+            if conn:
+                conn.close()
+                print("Соединение с SQLite закрыто")
+            return result
 def read_month_rating():
     try:
         conn = sqlite3.connect('mileage.db')
@@ -488,3 +500,9 @@ def get_yesterday():
     yesterday = today - timedelta(days=1)
     yesterday_format = yesterday.strftime(date_format)
     return yesterday_format
+
+def get_yesterweek():
+    date_format = '%V'
+    yesterweek = datetime.now() - timedelta(days=7)
+    yesterweek_format = yesterweek.strftime(date_format)
+    return yesterweek_format
