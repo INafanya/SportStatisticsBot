@@ -122,7 +122,7 @@ async def cmd_user_statistics(
 
 # @router.message(F.chat.type == "supergroup", Command("day"))
 async def show_day_rating(bot: Bot
-                         ):
+                          ):
     try:
         day_rating = read_day_rating()
         text_answer = ""
@@ -161,9 +161,48 @@ async def show_day_rating(bot: Bot
 
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
-                               ):
+                         ):
     await show_day_rating(bot)
 
+
+async def show_week_rating(message: Message, bot: Bot
+                           ):
+    try:
+        week_rating = read_week_rating()
+        text_answer = ""
+
+        if len(week_rating) == 1:
+
+            for (index, i) in enumerate(week_rating[0]):
+                text_answer += f"{index + 1}. {week_rating[0][index][1]} - {week_rating[0][index][2]} км.\n"
+
+        else:
+            winners, loosers, users_summ = read_week_rating()
+            loosers_index = users_summ[0][0] - 2
+
+            for (index, i) in enumerate(winners):
+                text_answer += f"{index + 1}. {winners[index][1]} - {winners[index][2]} км.\n"
+
+            text_answer += f"...\n"
+
+            for (index, i) in enumerate(loosers):
+                text_answer += f"{loosers_index}. {loosers[index][1]} - {loosers[index][2]} км.\n"
+                loosers_index += 1
+
+    except IndexError:
+        text_answer = f'Нет пробега за прошлую неделю'
+
+    await bot.send_message(
+        chat_id,
+        f"#Итог прошлой недели {(datetime.now() - timedelta(days=7)).strftime('%V')}\n"
+        f"\n"
+        f"{text_answer}"
+    )
+
+@router.message(F.chat.type == "supergroup", Command("week"))
+async def cmd_day_rating(message: Message, bot: Bot
+                         ):
+    await show_week_rating(bot)
 
 @router.message(F.chat.type == "supergroup", Command("test"))
 async def cmd_day_rating_test(
@@ -202,5 +241,4 @@ async def cmd_day_rating_test(
     await bot.send_message(chat_id, f"#Итог дня {day_now.strftime('%d.%m.%Y')}\n"
                                     f"\n"
                                     f"{text_answer}"
-
                            )
