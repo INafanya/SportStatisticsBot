@@ -165,7 +165,8 @@ async def cmd_day_rating(message: Message, bot: Bot
     await show_day_rating(bot)
 
 
-async def show_week_rating(message: Message, bot: Bot
+async def show_week_rating(
+        bot: Bot
                            ):
     try:
         week_rating = read_week_rating()
@@ -200,7 +201,7 @@ async def show_week_rating(message: Message, bot: Bot
     )
 
 @router.message(F.chat.type == "supergroup", Command("week"))
-async def cmd_day_rating(message: Message, bot: Bot
+async def cmd_week_rating(message: Message, bot: Bot
                          ):
     await show_week_rating(bot)
 
