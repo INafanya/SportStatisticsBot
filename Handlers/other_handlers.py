@@ -162,7 +162,7 @@ async def show_day_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                                ):
-    await show_day_rating()
+    await show_day_rating(bot)
 
 
 @router.message(F.chat.type == "supergroup", Command("test"))

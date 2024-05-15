@@ -41,17 +41,17 @@ async def main() -> None:
     if __name__ == '__main__':
         # Инициализируем планировщик
         scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-        # суточный таймер. Обнуляет дневной пробег каждый день в 23:57
-        scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=50)
+        # суточный таймер. Обнуляет дневной пробег каждый день в 23:54
+        scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=54)
 
         scheduler.add_job(show_day_rating, 'cron', hour=8, minute=0, args=(bot,))
 
-        # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:58
-        scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=52)
+        # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
+        scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
 
         # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
         # переделать под 4-х недельный таймер
-        scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=54)
+        scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
 
         scheduler.start()
     # проверяем на наличие БД
