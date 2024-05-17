@@ -139,6 +139,7 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
+        #проверка на отрицательное значение
         if day_mileage + new_mileage > 0:
             day_mileage += new_mileage
             week_mileage += new_mileage
