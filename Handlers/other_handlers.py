@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from aiogram import Router, F, Bot, types
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.types import Message, FSInputFile
