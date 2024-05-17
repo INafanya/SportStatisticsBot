@@ -21,4 +21,6 @@ config = Settings()
 
 admin = (1060800091, 741201603)
 
-chat_id = -1002119719477
+chat_id = -1002086508659
+
+#test_chat_id=-1002119719477

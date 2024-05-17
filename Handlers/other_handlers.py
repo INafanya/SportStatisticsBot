@@ -29,7 +29,7 @@ async def chat_user_added(message: Message):
             "Привет, ",
             Bold(user.full_name), ". "
                                   "Справка по боту: /помощь"
-                                  "Для работы с ботом нажми https://t.me/SportStatistics_bot"
+                                  "Для начала работы с ботом нажми https://t.me/SportStatistics_bot"
         )
         await message.reply(
             **content.as_kwargs()
@@ -66,10 +66,6 @@ async def cmd_add_statistics(
         await message.reply(
             "Обманщик!"
         )
-    #elif new_mileage < 0:
-    #    await message.reply(
-    #        "Пробег не может быть меньше 0 км"
-    #    )
         return
 
     day_mileage = update_day_data_db(telegram_id, username, new_mileage)
@@ -110,7 +106,7 @@ async def cmd_user_statistics(
 
         await bot.send_message(
             telegram_id,
-            f"Твоя статистика бега за {datetime.now().strftime('%d.%m.%Y')}:\n"
+            f"Твоя статистика бега на {datetime.now().strftime('%d.%m.%Y')}:\n"
             f"\n"
             f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км.\n"
             f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км.\n"
@@ -162,7 +158,11 @@ async def show_day_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                          ):
-    await show_day_rating(bot)
+    if message.from_user.id in admin:
+        await show_day_rating(bot)
+    else:
+        await message.answer(f"Эта команда для админа!")
+
 
 
 async def show_week_rating(bot: Bot
@@ -201,7 +201,11 @@ async def show_week_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot
                           ):
-    await show_week_rating(bot)
+    if message.from_user.id in admin:
+        await show_week_rating(bot)
+    else:
+        await message.answer(f"Эта команда для админа!")
+
 
 
 @router.message(F.chat.type == "private", Command("файл"))
