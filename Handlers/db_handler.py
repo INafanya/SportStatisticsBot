@@ -135,7 +135,7 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     # проверяем есть ли пользователь в БД, если нет добавляем пользователя в БД
     if not user_statistics:
         add_data_db(telegram_id, username, new_mileage)
-        # return new_mileage
+        return new_mileage
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
