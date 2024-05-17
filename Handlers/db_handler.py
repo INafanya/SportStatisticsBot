@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd
 from datetime import datetime, timedelta
 
 
@@ -134,46 +135,50 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     # проверяем есть ли пользователь в БД, если нет добавляем пользователя в БД
     if not user_statistics:
         add_data_db(telegram_id, username, new_mileage)
-        return new_mileage
+        # return new_mileage
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
-        day_mileage += new_mileage
-        week_mileage += new_mileage
-        month_mileage += new_mileage
-        total_mileage += new_mileage
-        try:
-            conn = sqlite3.connect('mileage.db')
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE users_mileage 
-                SET 
-                username = ?,
-                day_mileage = ?,
-                week_mileage = ?,
-                month_mileage = ?,
-                total_mileage = ?
-                WHERE 
-                telegram_id = ?
-                ''',
-                           (username,
-                            day_mileage,
-                            week_mileage,
-                            month_mileage,
-                            total_mileage,
-                            telegram_id)
-                           )
-            conn.commit()
-            # cursor.close()
+        if day_mileage + new_mileage > 0:
+            day_mileage += new_mileage
+            week_mileage += new_mileage
+            month_mileage += new_mileage
+            total_mileage += new_mileage
 
-        except sqlite3.Error as error:
-            print("Ошибка при работе с SQLite", error)
+            try:
+                conn = sqlite3.connect('mileage.db')
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE users_mileage 
+                    SET 
+                    username = ?,
+                    day_mileage = ?,
+                    week_mileage = ?,
+                    month_mileage = ?,
+                    total_mileage = ?
+                    WHERE 
+                    telegram_id = ?
+                    ''',
+                               (username,
+                                day_mileage,
+                                week_mileage,
+                                month_mileage,
+                                total_mileage,
+                                telegram_id)
+                               )
+                conn.commit()
+                # cursor.close()
 
-        finally:
-            if conn:
-                conn.close()
-                print("Соединение с SQLite закрыто")
-            return day_mileage
+            except sqlite3.Error as error:
+                print("Ошибка при работе с SQLite", error)
+
+            finally:
+                if conn:
+                    conn.close()
+                    print("Соединение с SQLite закрыто")
+                return day_mileage
+        else:
+            return 0
 
 
 # копирование и отчистка дневной статистики
@@ -435,3 +440,22 @@ def get_yesterweek():
     yesterweek = datetime.now() - timedelta(days=7)
     yesterweek_format = yesterweek.strftime(date_format)
     return yesterweek_format
+
+
+def export_data_to_file():
+    print("Начинаю экспорт данных из БД в файл")
+    # db_data = read_day_rating()
+    # filename = (datetime.now()).strftime('%d.%m.%Y_%hh.%mm')
+    try:
+        conn = sqlite3.connect('mileage.db')
+        db_data = pd.read_sql('SELECT id, telegram_id, username, date, day_mileage FROM day_mileage', conn)
+        filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
+        db_data.to_excel(fr'{filename}', index=False)
+
+    except PermissionError as error:
+        print(f"Ошибка экспорта, {error}")
+    finally:
+        if conn:
+            conn.close()
+            print("Экспорт данных из БД в файл закончен")
+        return filename

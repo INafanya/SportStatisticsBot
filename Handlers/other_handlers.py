@@ -1,11 +1,11 @@
+import os
 from datetime import datetime, timedelta
-
-from aiogram import Router, F, Bot
+from aiogram import Router, F, Bot, types
 from aiogram.filters import CommandStart, Command, CommandObject
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, \
-    get_yesterday, get_yesterweek
+    get_yesterday, get_yesterweek, export_data_to_file
 from Config.config_reader import admin, chat_id
 
 router: Router = Router()
@@ -66,10 +66,10 @@ async def cmd_add_statistics(
         await message.reply(
             "Обманщик!"
         )
-    elif new_mileage < 0.09:
-        await message.reply(
-            "Минимальный пробег 0.2 км"
-        )
+    #elif new_mileage < 0:
+    #    await message.reply(
+    #        "Пробег не может быть меньше 0 км"
+    #    )
         return
 
     day_mileage = update_day_data_db(telegram_id, username, new_mileage)
@@ -133,7 +133,6 @@ async def show_day_rating(bot: Bot
         summ_mileage = 0
         winners = ""
         loosers = ""
-        #yesterday = (datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')
         yesterday = get_yesterday()
         user_sum = len(day_rating)
 
@@ -143,30 +142,31 @@ async def show_day_rating(bot: Bot
             if index <= 4:
                 winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
             elif index >= user_sum - 3:
-                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
+                loosers += f"...\n" \
+                           f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
         text_answer = f"{winners}" \
-                      f"...\n" \
                       f"{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterday}'
 
     await bot.send_message(
         chat_id,
-        f"#Итог дня {yesterday}\n"
-        f"#Командный пробег: {round(summ_mileage, 2)}км.\n"
+        f"#Итог_дня {yesterday}\n"
+        f"#Командный_пробег: {round(summ_mileage, 2)}км.\n"
         f"\n"
         f"{text_answer}"
     )
 
-#Отправка дневного рейтинга по команде /day
+
+# Отправка дневного рейтинга по команде /day
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
-                               ):
+                         ):
     await show_day_rating(bot)
 
 
 async def show_week_rating(bot: Bot
-                          ):
+                           ):
     try:
         week_rating = read_week_rating()
         text_answer = ""
@@ -182,64 +182,45 @@ async def show_week_rating(bot: Bot
             if index <= 4:
                 winners += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
             elif index >= user_sum - 3:
-                loosers += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
+                loosers += f"...\n" \
+                           f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
         text_answer = f"{winners}" \
-                      f"...\n" \
                       f"{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterweek} неделю'
 
     await bot.send_message(
         chat_id,
-        f"#Итог {yesterweek} недели\n"
-        f"#Командный пробег: {round(summ_mileage, 2)}км.\n"
+        f"#Рейтинг_недели {yesterweek}\n"
+        f"#Командный_пробег: {round(summ_mileage, 2)}км.\n"
         f"\n"
         f"{text_answer}"
     )
-
 
 
 @router.message(F.chat.type == "supergroup", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot
-                               ):
+                          ):
     await show_week_rating(bot)
 
 
-async def show_test(bot: Bot
-                          ):
-    try:
-        day_rating = read_test()
-        text_answer = ""
-        summ_mileage = 0
-        winners = ""
-        loosers = ""
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')
-        user_sum = len(day_rating)
-        print(f"Кол-во пользователей: {user_sum}")
-        print(day_rating)
-        for (index, i) in enumerate(day_rating):
-            float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
-            summ_mileage += float_day_rating
-            if index <=4:
-                winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
-            elif index >= user_sum - 3:
-                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
-        text_answer = f"{winners}" \
-                      f"...\n" \
-                      f"{loosers}"
-    except IndexError:
-        text_answer = f'Нет пробега за {yesterday}'
+@router.message(F.chat.type == "private", Command("файл"))
+async def cmd_export_data_to_file(
+        message: types.Document,
+        bot: Bot,
+):
+    if message.from_user.id in admin:
+        filename = export_data_to_file()
 
-    await bot.send_message(
-        chat_id,
-        f"#Итог дня {yesterday}\n"
-        f"#Командный пробег: {round(summ_mileage, 2)}\n"
-        f"\n"
-        f"{text_answer}"
-    )
+        file_to_send = FSInputFile(filename)
 
-
-@router.message(F.chat.type == "supergroup", Command("test"))
-async def cmd_test_admin(message: Message, bot: Bot
-                               ):
-    await show_test(bot)
+        if os.path.exists(filename):
+            print("Отправка файла пользователю")
+            await bot.send_document(message.from_user.id, file_to_send)
+            os.remove(filename)
+            print("Файл отправлен")
+            print("Файл удалён")
+        else:
+            await bot.send_message(message.from_user.id, "Файл не найден. Проверьте путь к файлу.")
+    else:
+        await message.answer(f"Эта команда для админа!")
