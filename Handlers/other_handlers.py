@@ -14,11 +14,8 @@ router: Router = Router()
 # Обработчик сообщения команды /start
 @router.message(F.chat.type == "private", CommandStart())
 async def command_start_handler(message: Message) -> None:
-    if message.from_user.id in admin:
-        await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
-                             f"Личная статистика:\n /стат")
-    else:
-        await message.answer(f"Эта команда для админа!")
+    await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
+                         f"Личная статистика:\n /стат")
 
 
 # Действие при добавлении нового участника чата
@@ -29,7 +26,7 @@ async def chat_user_added(message: Message):
             "Привет, ",
             Bold(user.full_name), ". "
                                   "Справка по боту: /помощь"
-                                  "Для начала работы с ботом нажми https://t.me/SportStatistics_bot"
+                                  "Для работы с ботом нажми https://t.me/SportStatistics_bot"
         )
         await message.reply(
             **content.as_kwargs()
@@ -66,6 +63,10 @@ async def cmd_add_statistics(
         await message.reply(
             "Обманщик!"
         )
+        # elif new_mileage < 0:
+        #    await message.reply(
+        #        "Пробег не может быть меньше 0 км"
+        #    )
         return
 
     day_mileage = update_day_data_db(telegram_id, username, new_mileage)
@@ -106,7 +107,7 @@ async def cmd_user_statistics(
 
         await bot.send_message(
             telegram_id,
-            f"Твоя статистика бега на {datetime.now().strftime('%d.%m.%Y')}:\n"
+            f"Твоя статистика бега за {datetime.now().strftime('%d.%m.%Y')}:\n"
             f"\n"
             f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км.\n"
             f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км.\n"
@@ -158,11 +159,7 @@ async def show_day_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                          ):
-    if message.from_user.id in admin:
-        await show_day_rating(bot)
-    else:
-        await message.answer(f"Эта команда для админа!")
-
+    await show_day_rating(bot)
 
 
 async def show_week_rating(bot: Bot
@@ -201,11 +198,7 @@ async def show_week_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot
                           ):
-    if message.from_user.id in admin:
-        await show_week_rating(bot)
-    else:
-        await message.answer(f"Эта команда для админа!")
-
+    await show_week_rating(bot)
 
 
 @router.message(F.chat.type == "private", Command("файл"))
