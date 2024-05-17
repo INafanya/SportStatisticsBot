@@ -139,17 +139,21 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
-        #проверка на отрицательное значение
+        # проверка на отрицательное значение
         if day_mileage + new_mileage > 0:
             day_mileage += new_mileage
             week_mileage += new_mileage
             month_mileage += new_mileage
             total_mileage += new_mileage
-
-            try:
-                conn = sqlite3.connect('mileage.db')
-                cursor = conn.cursor()
-                cursor.execute('''
+        else:
+            week_mileage -= day_mileage
+            month_mileage -= day_mileage
+            total_mileage -= day_mileage
+            day_mileage = 0
+        try:
+            conn = sqlite3.connect('mileage.db')
+            cursor = conn.cursor()
+            cursor.execute('''
                     UPDATE users_mileage 
                     SET 
                     username = ?,
@@ -160,26 +164,24 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
                     WHERE 
                     telegram_id = ?
                     ''',
-                               (username,
-                                day_mileage,
-                                week_mileage,
-                                month_mileage,
-                                total_mileage,
-                                telegram_id)
-                               )
-                conn.commit()
-                # cursor.close()
+                           (username,
+                            day_mileage,
+                            week_mileage,
+                            month_mileage,
+                            total_mileage,
+                            telegram_id)
+                           )
+            conn.commit()
+            # cursor.close()
 
-            except sqlite3.Error as error:
-                print("Ошибка при работе с SQLite", error)
+        except sqlite3.Error as error:
+            print("Ошибка при работе с SQLite", error)
 
-            finally:
-                if conn:
-                    conn.close()
-                    print("Соединение с SQLite закрыто")
-                return day_mileage
-        else:
-            return 0
+        finally:
+            if conn:
+                conn.close()
+                print("Соединение с SQLite закрыто")
+            return day_mileage
 
 
 # копирование и отчистка дневной статистики
