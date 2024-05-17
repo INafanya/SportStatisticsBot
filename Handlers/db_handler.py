@@ -134,8 +134,12 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
     user_statistics = read_user_statistics_from_db(telegram_id)
     # проверяем есть ли пользователь в БД, если нет добавляем пользователя в БД
     if not user_statistics:
+        if new_mileage < 0:
+            new_mileage = 0
         add_data_db(telegram_id, username, new_mileage)
-        return new_mileage
+        user_statistics = read_user_statistics_from_db(telegram_id)
+        username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
+        print(f"новый пользователь, пробег: {new_mileage}")
     else:
         # обновляем дневной пробег пользователя
         username, day_mileage, week_mileage, month_mileage, total_mileage = user_statistics
@@ -150,10 +154,10 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
             month_mileage -= day_mileage
             total_mileage -= day_mileage
             day_mileage = 0
-        try:
-            conn = sqlite3.connect('mileage.db')
-            cursor = conn.cursor()
-            cursor.execute('''
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
                     UPDATE users_mileage 
                     SET 
                     username = ?,
@@ -164,24 +168,24 @@ def update_day_data_db(telegram_id: int, username: str, new_mileage: float):
                     WHERE 
                     telegram_id = ?
                     ''',
-                           (username,
-                            day_mileage,
-                            week_mileage,
-                            month_mileage,
-                            total_mileage,
-                            telegram_id)
-                           )
-            conn.commit()
-            # cursor.close()
+                       (username,
+                        day_mileage,
+                        week_mileage,
+                        month_mileage,
+                        total_mileage,
+                        telegram_id)
+                       )
+        conn.commit()
+        # cursor.close()
 
-        except sqlite3.Error as error:
-            print("Ошибка при работе с SQLite", error)
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
 
-        finally:
-            if conn:
-                conn.close()
-                print("Соединение с SQLite закрыто")
-            return day_mileage
+    finally:
+        if conn:
+            conn.close()
+            print("Соединение с SQLite закрыто")
+        return day_mileage
 
 
 # копирование и отчистка дневной статистики
