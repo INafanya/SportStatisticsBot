@@ -25,8 +25,8 @@ async def chat_user_added(message: Message):
         content = Text(
             "Привет, ",
             Bold(user.full_name), ". "
+                                  "Для работы с ботом нажми https://t.me/SportStatistics_bot\n"
                                   "Справка по боту: /помощь"
-                                  "Для работы с ботом нажми https://t.me/SportStatistics_bot"
         )
         await message.reply(
             **content.as_kwargs()
@@ -130,6 +130,7 @@ async def show_day_rating(bot: Bot
         summ_mileage = 0
         winners = ""
         loosers = ""
+        razdelitel = ""
         yesterday = get_yesterday()
         user_sum = len(day_rating)
 
@@ -139,9 +140,10 @@ async def show_day_rating(bot: Bot
             if index <= 4:
                 winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
             elif index >= user_sum - 3:
-                loosers += f"...\n" \
-                           f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
+                razdelitel = f"...\n"
+                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
         text_answer = f"{winners}" \
+                      f"{razdelitel}" \
                       f"{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterday}'
@@ -159,7 +161,8 @@ async def show_day_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                          ):
-    await show_day_rating(bot)
+    if message.from_user.id in admin:
+        await show_day_rating(bot)
 
 
 async def show_week_rating(bot: Bot
@@ -198,7 +201,8 @@ async def show_week_rating(bot: Bot
 @router.message(F.chat.type == "supergroup", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot
                           ):
-    await show_week_rating(bot)
+    if message.from_user.id in admin:
+        await show_week_rating(bot)
 
 
 @router.message(F.chat.type == "private", Command("файл"))
