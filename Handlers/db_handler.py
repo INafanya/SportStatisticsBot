@@ -249,7 +249,7 @@ def copy_and_clear_week_mileage():
         cursor.execute('''
                     SELECT
                     telegram_id,
-                    usernsme,
+                    username,
                     strftime('%W', datetime('now')) as date,
                     week_mileage
                     FROM users_mileage

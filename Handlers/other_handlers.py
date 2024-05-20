@@ -182,9 +182,10 @@ async def show_week_rating(bot: Bot
             if index <= 4:
                 winners += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
             elif index >= user_sum - 3:
-                loosers += f"...\n" \
-                           f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
+                razdelitel = f"...\n"
+                loosers += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
         text_answer = f"{winners}" \
+                      f"{razdelitel}" \
                       f"{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterweek} неделю'
