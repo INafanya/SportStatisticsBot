@@ -237,16 +237,20 @@ def copy_and_clear_day_mileage():
             SELECT 
             telegram_id,
             username,
+            fullname,
+            gender,
+            category,
             strftime('%d.%m.%Y', datetime('now')) as date,
-            day_mileage
+            day_mileage,
+            day_mileage_time
             FROM users_mileage
             ''')
 
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO day_mileage
-                        (telegram_id , username, date, day_mileage)
-                        VALUES (?, ?, ?, ?)'''
+                        (telegram_id , username, fullname, gender, category, date, day_mileage, day_mileage_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
@@ -257,11 +261,10 @@ def copy_and_clear_day_mileage():
         print("Обнуляю дневную статистику")
         cursor.execute('''
             UPDATE users_mileage 
-            SET day_mileage = 0
+            SET day_mileage = 0, day_mileage_time = 0
             ''')
         conn.commit()
         print("Обнуление дневной статистики завершено")
-
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -270,7 +273,6 @@ def copy_and_clear_day_mileage():
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
-            # cmd_day_rating()
 
 
 # отчистка недельной статистики
@@ -368,31 +370,30 @@ def read_day_rating():
         cursor = conn.cursor()
         print("Подключение к SQLite успешно")
         yesterday = get_yesterday()
-        # users_sum = cursor.fetchall()
         cursor.execute('''
                 SELECT 
                 telegram_id,
-                username,
-                day_mileage
+                fullname,
+                day_mileage,
+                day_mileage_time
                 FROM day_mileage
                 WHERE date = ? AND day_mileage > 0
                 ORDER BY day_mileage DESC
                 ''', (yesterday,), )
-
-        results = cursor.fetchall()
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
 
     finally:
         if conn:
+            results = cursor.fetchall()
             conn.close()
             print("Дневной рейтинг считан")
             print("Соединение с SQLite закрыто")
         return results
 
 
-def read_week_rating():
+def read_week_rating(): #исправить
     try:
         print("Считываю недельный рейтинг")
         conn = sqlite3.connect('mileage.db')
@@ -421,7 +422,7 @@ def read_week_rating():
         return results
 
 
-def read_month_rating():
+def read_month_rating(): # исправить
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()

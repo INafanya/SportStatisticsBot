@@ -155,7 +155,7 @@ async def cmd_help(
         f"Уменьшение пробега:\n"
         f"/д -км.км -мин\n"
         f"Личная статистика:\n"
-        f"/стат"
+        f"/statistics"
     )
 
 
@@ -193,24 +193,23 @@ async def show_day_rating(bot: Bot
                           ):
     try:
         day_rating = read_day_rating()
-        text_answer = ""
         summ_mileage = 0
         winners = ""
         loosers = ""
-        razdelitel = ""
+        delimiter = ""
         yesterday = get_yesterday()
-        user_sum = len(day_rating)
 
         for (index, i) in enumerate(day_rating):
             float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
             summ_mileage += float_day_rating
             if index <= 4:
                 winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
-            elif index >= user_sum - 3:
-                razdelitel = f"...\n"
+            elif index >= len(day_rating) - 3:
+                delimiter = f"...\n"
                 loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
+
         text_answer = f"{winners}" \
-                      f"{razdelitel}" \
+                      f"{delimiter}" \
                       f"{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterday}'
