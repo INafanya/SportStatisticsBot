@@ -187,6 +187,14 @@ async def cmd_user_statistics(
             f"Сначала добавь пробег"
         )
 
+@router.message(Command("support"))
+async def get_support(
+        message: Message,
+        bot: Bot):
+    await bot.send_message(
+        message.from_user.id,
+        f"Напишите нам: @AVSolovyov"
+    )
 
 # отправка дневного рейтинга в общий чат
 async def show_day_rating(bot: Bot
