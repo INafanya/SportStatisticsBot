@@ -7,14 +7,14 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, \
-    get_yesterday, get_yesterweek, export_data_to_file, add_new_user
+    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating
 from Config.config_reader import admin, chat_id
 
 from Keyboards.keyboards import make_row_keyboard
 
 router: Router = Router()
 
-available_genders = ["Мужчина", "Женщина"]
+available_genders = ["Богатырь", "Царевна"]
 available_categories = ["1", "2", "3"]
 
 
@@ -41,8 +41,8 @@ async def name_added(message: Message, state: FSMContext):
     await state.update_data(name_added=message.text)
     user_data = await state.get_data()
     await message.answer(
-        text=f"Приятно познакомится, {user_data['name_added']}! Теперь укажите свой пол:",
-        reply_markup=make_row_keyboard(available_genders, txt='Ваш пол:'))
+        text=f"Приятно познакомится, {user_data['name_added']}! Теперь укажите кто Вы:",
+        reply_markup=make_row_keyboard(available_genders, txt='Вы:'))
     await state.set_state(Znakomstvo.choosing_genders)
 
 
@@ -61,7 +61,7 @@ async def gender_incorrectly(message: Message):
     await message.answer(
         text="Я не знаю такого пола.\n\n"
              "Пожалуйста, выберите один из вариантов:",
-        reply_markup=make_row_keyboard(available_genders, txt='Ваш пол:')
+        reply_markup=make_row_keyboard(available_genders, txt='Вы:')
     )
 
 
@@ -142,7 +142,6 @@ async def cmd_add_statistics(
         )
 
 
-
 # обработчика команды /помощь
 @router.message(F.chat.type == "supergroup", Command("помощь"))
 async def cmd_help(
@@ -187,6 +186,7 @@ async def cmd_user_statistics(
             f"Сначала добавь пробег"
         )
 
+
 @router.message(Command("support"))
 async def get_support(
         message: Message,
@@ -195,6 +195,7 @@ async def get_support(
         message.from_user.id,
         f"Напишите нам: @AVSolovyov"
     )
+
 
 # отправка дневного рейтинга в общий чат
 async def show_day_rating(bot: Bot
@@ -231,12 +232,52 @@ async def show_day_rating(bot: Bot
     )
 
 
+async def show_day_time_rating(bot: Bot
+                               ):
+    try:
+        day_rating = read_day_time_rating()
+        summ_mileage = 0
+        winners = ""
+        loosers = ""
+        delimiter = ""
+        yesterday = get_yesterday()
+
+        for (index, i) in enumerate(day_rating):
+            float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
+            summ_mileage += float_day_rating
+            if index <= 4:
+                winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} мин.\n"
+            elif index >= len(day_rating) - 3:
+                delimiter = f"...\n"
+                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} мин.\n"
+
+        text_answer = f"{winners}" \
+                      f"{delimiter}" \
+                      f"{loosers}"
+    except IndexError:
+        text_answer = f'Нет пробега за {yesterday}'
+
+    await bot.send_message(
+        chat_id,
+        f"#Итог_дня {yesterday}\n"
+        f"#Командный_пробег: {round(summ_mileage, 2)}мин.\n"
+        f"\n"
+        f"{text_answer}"
+    )
+
+
 # Отправка дневного рейтинга по команде /day
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                          ):
     if message.from_user.id in admin:
         await show_day_rating(bot)
+
+@router.message(F.chat.type == "supergroup", Command("day_time"))
+async def cmd_day_time_rating(message: Message, bot: Bot
+                         ):
+    if message.from_user.id in admin:
+        await show_day_time_rating(bot)
 
 
 async def show_week_rating(bot: Bot
