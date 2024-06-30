@@ -1,14 +1,14 @@
 import os
 from datetime import datetime
 from aiogram import Router, F, Bot, types
-from aiogram.filters import CommandStart, Command, CommandObject, StateFilter
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, \
-    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating
-from Config.config_reader import admin, chat_id
+    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db
+from Config.config_reader import admin, chat_id, botname
 
 from Keyboards.keyboards import make_row_keyboard
 
@@ -102,7 +102,7 @@ async def cmd_add_statistics(
     # Обработка ошибок ввода пробега
     try:
         new_mileage = float(command.args.split()[0])
-        new_mileage_time = float(command.args.split()[1])
+        new_mileage_time = round(float(command.args.split()[1]), 2)
     # пробег и время число?
     except ValueError:
         await message.reply("Укажите пробег и время числом")
@@ -120,7 +120,7 @@ async def cmd_add_statistics(
 
         # проверка на наличие пользователя в БД
     if not read_user_statistics_from_db(message.from_user.id):
-        await message.reply("Для начала, познакомься с ботом: https://t.me/SportStatistics_bot\n")
+        await message.reply(f"Для начала, познакомься с ботом: {botname}\n")
         return
     # нереальный дневной пробег
     elif len(command.args.split()) > 2:
@@ -134,11 +134,12 @@ async def cmd_add_statistics(
         return
     else:
         # добавление пробега в БД
+        points_finish = update_today_data_db(telegram_id, new_mileage, new_mileage_time)
         day_mileage, day_mileage_time = update_day_data_db(telegram_id, new_mileage, new_mileage_time)
 
         await message.reply(
-            f"Новый пробег зафиксирован\n"
-            f"Итого за сегодня: {round(day_mileage, 2)} км. за {day_mileage_time} мин."
+            f"Новый пробег зафиксирован:\n"
+            f"{round(new_mileage, 2)} км. за {round(new_mileage_time, 2)} мин. Баллы: {round(points_finish, 2)}"
         )
 
 
@@ -148,7 +149,7 @@ async def cmd_help(
         message: Message,
 ):
     await message.reply(
-        f"Для работы с ботом нажми https://t.me/SportStatistics_bot\n"
+        f"Для работы с ботом нажми {botname}\n"
         f"Добавление пробега:\n"
         f"/д км.км мин\n"
         f"Уменьшение пробега:\n"

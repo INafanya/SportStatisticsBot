@@ -16,18 +16,36 @@ def create_sql_db():
                         username TEXT,
                         fullname TEXT,
                         gender TEXT,
-                        category TEXT,
+                        category INTEGER,
                         day_mileage FLOAT,
                         day_mileage_time FLOAT,
+                        day_mileage_points FLOAT,
                         week_mileage FLOAT,
                         week_mileage_time FLOAT,
+                        week_mileage_points FLOAT,
                         month_mileage FLOAT,
                         month_mileage_time FLOAT,
+                        month_mileage_points FLOAT,
                         total_mileage FLOAT,
-                        total_mileage_time FLOAT
+                        total_mileage_time FLOAT,
+                        total_mileage_points FLOAT
                     )
                     ''')
-        # print("Создана таблица users_mileage")
+        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS points_mileage (
+                                id INTEGER PRIMARY KEY,
+                                telegram_id INTEGER,
+                                username TEXT,
+                                fullname TEXT,
+                                gender TEXT,
+                                category INTEGER,
+                                date DATE,
+                                mileage FLOAT,
+                                mileage_time FLOAT,
+                                points FLOAT
+                            )
+                            ''')
+
         cursor.execute('''
                     CREATE TABLE IF NOT EXISTS day_mileage (
                         id INTEGER PRIMARY KEY,
@@ -35,10 +53,11 @@ def create_sql_db():
                         username TEXT,
                         fullname TEXT,
                         gender TEXT,
-                        category TEXT,
+                        category INTEGER,
                         date DATE,
-                        day_mileage FLOAT,
-                        day_mileage_time FLOAT
+                        mileage FLOAT,
+                        mileage_time FLOAT,
+                        points FLOAT
                     )
                     ''')
         # print("Создана таблица day_mileage")
@@ -49,10 +68,11 @@ def create_sql_db():
                         username TEXT,
                         fullname TEXT,
                         gender TEXT,
-                        category TEXT,
+                        category INTEGER,
                         week DATE,
-                        week_mileage FLOAT,
-                        week_mileage_time FLOAT
+                        mileage FLOAT,
+                        mileage_time FLOAT,
+                        points FLOAT
                     )
                     ''')
         # print("Создана таблица week_mileage")
@@ -63,10 +83,11 @@ def create_sql_db():
                         username TEXT,
                         fullname TEXT,
                         gender TEXT,
-                        category TEXT,
+                        category INTEGER,
                         month DATE,
-                        month_mileage FLOAT,
-                        month_mileage_time FLOAT
+                        mileage FLOAT,
+                        mileage_time FLOAT,
+                        points FLOAT
                     )
                     ''')
         # print("Создана таблица month_mileage")
@@ -114,6 +135,30 @@ def read_user_statistics_from_db(telegram_id: int):
             print("Соединение с SQLite закрыто")
             return user_statistics
 
+# Новая версия запроса сегодняшней статистики по пользователю с балами
+def read_user_from_db(telegram_id: int):
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+            username,
+            fullname,
+            gender,
+            category
+            FROM users_mileage
+            WHERE telegram_id = ?
+            ''', (telegram_id,), )
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            user_statistics = cursor.fetchone()
+            conn.close()
+            print("Соединение с SQLite закрыто")
+            return user_statistics
 
 def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, category: str):
     try:
@@ -221,8 +266,103 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
         if conn:
             conn.close()
             print("Соединение с SQLite закрыто")
+
         return day_mileage, day_mileage_time
 
+
+# обновление дневного пробега текущего дня в БД с вычислением балов
+def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time: int):
+    speed_points = {
+        6.666666667: 0,
+        7.058823529: 1,
+        7.5: 2,
+        8.0: 3,
+        8.571428571: 4,
+        9.230769231: 5,
+        10.0: 6,
+        10.90909091: 7,
+        12.0: 8,
+        13.33333333: 9,
+        15.50387597: 10,
+        16.90140845: 11,
+        18.09408926: 12,
+        19.46156341: 13,
+    }
+
+    # получение данных пользователя
+    user = read_user_from_db(telegram_id)
+    username, fullname, gender, category = user
+    print(user)
+    # расчёт балов
+    points = 0.0
+    speed = 0.0
+
+    # расчет коэффициента с учетом расстояния
+    if new_mileage <= 1:
+        coeff = 0.7943
+    elif 1 < new_mileage <= 10:
+        coeff = pow(new_mileage/10, 0.1)
+    elif 10 < new_mileage <= 42:
+        coeff = pow(new_mileage/10, 0.12)
+    else:
+        coeff = 1.1879 + (new_mileage - 42) * 0.00912506
+    print(f"coeff = {coeff}")
+    print(f"new_mileage = {new_mileage}")
+    print(f"new_mileage_time = {new_mileage_time}")
+
+    # расчет скорости с учетом коэффициента и пола
+    if gender == 'царевна':
+        speed = (72 * new_mileage * coeff) / new_mileage_time
+    else:
+        speed = (60 * new_mileage * coeff) / new_mileage_time
+    print(f"speed = {speed}")
+
+    # поиск ближайшей минимальной скорости из списка
+    speed_points_keys = list(speed_points.keys())
+    for i in range(0, len(speed_points_keys)):
+        if speed_points_keys[i] // speed:
+            speed_min = speed_points_keys[i - 1]
+            speed_max = speed_points_keys[i]
+            print(f"speed_min = {speed_min}")
+            print(f"speed_max = {speed_max}")
+            break
+
+    # величина интервала
+    interval = speed_max - speed_min
+    # дробная часть баллов
+    if interval:
+        points_dop = (speed - speed_min) / interval
+    else:
+        points_dop = speed - speed_min
+    #print(f"interval = {interval}")
+    #print(f"points_dop = {points_dop}")
+
+    # баллы с учетом дистанции
+    points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
+    print(f"points_finish = {points_finish}")
+
+
+    today = datetime.now().strftime('%d.%m.%Y')
+
+    sql_txt = f'''INSERT INTO points_mileage
+                (telegram_id, username, fullname, gender, category, date, mileage, mileage_time, points)
+                VALUES ({telegram_id}, '{username}', '{fullname}', '{gender}', {category}, 
+                '{today}', {new_mileage}, {new_mileage_time}, {points_finish})'''
+    print(sql_txt)
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute(sql_txt)
+        conn.commit()
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            conn.close()
+            print("Соединение с SQLite закрыто")
+        return points_finish
 
 # копирование и отчистка дневной статистики
 def copy_and_clear_day_mileage():
@@ -249,7 +389,7 @@ def copy_and_clear_day_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO day_mileage
-                        (telegram_id , username, fullname, gender, category, date, day_mileage, day_mileage_time)
+                        (telegram_id , username, fullname, gender, category, date, mileage, mileage_time)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
@@ -296,7 +436,7 @@ def copy_and_clear_week_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO week_mileage
-                       (telegram_id , username, week, week_mileage)
+                       (telegram_id , username, week, mileage)
                        VALUES (?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
@@ -340,7 +480,7 @@ def copy_and_clear_month_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO month_mileage
-                                (telegram_id , username, month, month_mileage)
+                                (telegram_id , username, month, mileage)
                                 VALUES (?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
@@ -374,10 +514,10 @@ def read_day_rating():
                 SELECT 
                 telegram_id,
                 fullname,
-                day_mileage
+                mileage
                 FROM day_mileage
-                WHERE date = ? AND day_mileage > 0
-                ORDER BY day_mileage DESC
+                WHERE date = ? AND mileage > 0
+                ORDER BY mileage DESC
                 ''', (yesterday,), )
 
     except sqlite3.Error as error:
@@ -402,10 +542,10 @@ def read_day_time_rating():
                 SELECT 
                 telegram_id,
                 fullname,
-                day_mileage_time
+                mileage_time
                 FROM day_mileage
-                WHERE date = ? AND day_mileage > 0
-                ORDER BY day_mileage DESC
+                WHERE date = ? AND mileage > 0
+                ORDER BY mileage DESC
                 ''', (yesterday,), )
 
     except sqlite3.Error as error:
@@ -431,10 +571,10 @@ def read_week_rating(): #исправить
                     SELECT 
                     telegram_id,
                     username,
-                    week_mileage
+                    mileage
                     FROM week_mileage
-                    WHERE week = ? AND week_mileage > 0
-                    ORDER BY week_mileage DESC
+                    WHERE week = ? AND mileage > 0
+                    ORDER BY mileage DESC
                     ''', (yesterweek,), )
         results = cursor.fetchall()
 
@@ -467,9 +607,9 @@ def read_month_rating(): # исправить
             SELECT 
             telegram_id,
             username,
-            month_mileage
+            mileage
             FROM month_mileage
-            ORDER BY month_mileage DESC
+            ORDER BY mileage DESC
             LIMIT 5
             ''')
 
@@ -479,10 +619,10 @@ def read_month_rating(): # исправить
                     SELECT 
                     telegram_id,
                     username,
-                    month_mileage
+                    mileage
                     FROM month_mileage
-                    WHERE month_mileage > 0
-                    ORDER BY month_mileage ASC
+                    WHERE mileage > 0
+                    ORDER BY mileage ASC
                     LIMIT 3
                     ''')
         loosers = cursor.fetchall()
