@@ -292,10 +292,6 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
     # получение данных пользователя
     user = read_user_from_db(telegram_id)
     username, fullname, gender, category = user
-    print(user)
-    # расчёт балов
-    points = 0.0
-    speed = 0.0
 
     # расчет коэффициента с учетом расстояния
     if new_mileage <= 1:
@@ -306,16 +302,16 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         coeff = pow(new_mileage/10, 0.12)
     else:
         coeff = 1.1879 + (new_mileage - 42) * 0.00912506
-    print(f"coeff = {coeff}")
-    print(f"new_mileage = {new_mileage}")
-    print(f"new_mileage_time = {new_mileage_time}")
+    #print(f"coeff = {coeff}")
+    #print(f"new_mileage = {new_mileage}")
+    #print(f"new_mileage_time = {new_mileage_time}")
 
     # расчет скорости с учетом коэффициента и пола
     if gender == 'царевна':
         speed = (72 * new_mileage * coeff) / new_mileage_time
     else:
         speed = (60 * new_mileage * coeff) / new_mileage_time
-    print(f"speed = {speed}")
+    #print(f"speed = {speed}")
 
     # поиск ближайшей минимальной скорости из списка
     speed_points_keys = list(speed_points.keys())
@@ -323,8 +319,8 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         if speed_points_keys[i] // speed:
             speed_min = speed_points_keys[i - 1]
             speed_max = speed_points_keys[i]
-            print(f"speed_min = {speed_min}")
-            print(f"speed_max = {speed_max}")
+            #print(f"speed_min = {speed_min}")
+            #print(f"speed_max = {speed_max}")
             break
 
     # величина интервала
@@ -339,7 +335,7 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
 
     # баллы с учетом дистанции
     points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
-    print(f"points_finish = {points_finish}")
+    #print(f"points_finish = {points_finish}")
 
 
     today = datetime.now().strftime('%d.%m.%Y')
@@ -348,7 +344,6 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
                 (telegram_id, username, fullname, gender, category, date, mileage, mileage_time, points)
                 VALUES ({telegram_id}, '{username}', '{fullname}', '{gender}', {category}, 
                 '{today}', {new_mileage}, {new_mileage_time}, {points_finish})'''
-    print(sql_txt)
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()

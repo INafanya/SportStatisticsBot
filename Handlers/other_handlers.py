@@ -132,6 +132,10 @@ async def cmd_add_statistics(
     elif new_mileage > 300:
         await message.reply("Обманщик!")
         return
+    elif (new_mileage_time / new_mileage) < 2:
+        await message.reply(f"У нас новый мировой рекорд! Или нет?\n"
+                            f"Темп не может быть выше 2 мин./км.")
+        return
     else:
         # добавление пробега в БД
         points_finish = update_today_data_db(telegram_id, new_mileage, new_mileage_time)
