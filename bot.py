@@ -21,7 +21,9 @@ async def main() -> None:
     # конфигурируем логирование
     logging.basicConfig(
         level=logging.INFO,
-        format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s'
+        format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s',
+        filename="bot_log.log",
+        filemode="w"
     )
 
     # Выводим в консоль старт бота
@@ -60,7 +62,7 @@ async def main() -> None:
 
         scheduler.start()
     # проверяем на наличие БД
-    print("Проверка наличия БД")
+    logger.info("Проверка наличия БД")
     create_sql_db()
 
     # Пропускаем накопившиеся апдейты телеги и запускаем polling
