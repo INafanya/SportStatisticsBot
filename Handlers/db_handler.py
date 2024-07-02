@@ -132,7 +132,7 @@ def read_user_statistics_from_db(telegram_id: int):
         if conn:
             user_statistics = cursor.fetchone()
             conn.close()
-            print("Соединение с SQLite закрыто")
+            #print("Соединение с SQLite закрыто")
             return user_statistics
 
 # Новая версия запроса сегодняшней статистики по пользователю с балами
@@ -157,7 +157,7 @@ def read_user_from_db(telegram_id: int):
         if conn:
             user_statistics = cursor.fetchone()
             conn.close()
-            print("Соединение с SQLite закрыто")
+            #print("Соединение с SQLite закрыто")
             return user_statistics
 
 def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, category: str):
@@ -184,6 +184,7 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0,)
                     )
+
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
 
@@ -191,7 +192,7 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
         if conn:
             conn.commit()
             conn.close()
-            print("Соединение с SQLite закрыто")
+            #print("Соединение с SQLite закрыто")
 
 
 # обновление дневного пробега в БД
@@ -651,8 +652,8 @@ def get_yesterweek():
 def export_data_to_file():
     try:
         conn = sqlite3.connect('mileage.db')
-        db_data = pd.read_sql('SELECT * FROM day_mileage', conn)
-        filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
+        db_data = pd.read_sql('SELECT * FROM points_mileage', conn)
+        filename = f"Points_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
         db_data.to_excel(fr'{filename}', index=False)
 
     except PermissionError as error:
