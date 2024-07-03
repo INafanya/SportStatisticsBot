@@ -267,7 +267,7 @@ async def show_day_time_rating(bot: Bot
     await bot.send_message(
         chat_id,
         f"#Итог_дня {yesterday}\n"
-        f"#Командный_пробег: {round(summ_mileage, 2)}мин.\n"
+        f"#Командное_время: {round(summ_mileage, 2)}мин.\n"
         f"\n"
         f"{text_answer}"
     )
