@@ -210,10 +210,11 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
 def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: float, new_mileage_points: float):
     # получаем результат запроса статистики пользователя
     user_statistics = read_user_statistics_from_db(telegram_id)
-    # обновляем дневной пробег пользователя
+
     username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage,\
         week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, total_mileage,\
         total_mileage_time, total_mileage_points = user_statistics
+    # обновляем дневной пробег пользователя
     # проверка на отрицательное значение, если новый побег отрицательный и больше текущего,
     # то сбрасывается текущий пробег
     if day_mileage + new_mileage < 0:
@@ -274,13 +275,13 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: f
                         day_mileage_points,
                         week_mileage,
                         week_mileage_time,
-                        week_mileage_time,
+                        week_mileage_points,
                         month_mileage,
                         month_mileage_time,
-                        month_mileage_time,
+                        month_mileage_points,
                         total_mileage,
                         total_mileage_time,
-                        total_mileage_time,
+                        total_mileage_points,
                         telegram_id)
                        )
         conn.commit()
