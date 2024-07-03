@@ -652,9 +652,18 @@ def get_yesterweek():
 def export_data_to_file():
     try:
         conn = sqlite3.connect('mileage.db')
-        db_data = pd.read_sql('SELECT * FROM points_mileage', conn)
-        filename = f"Points_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
-        db_data.to_excel(fr'{filename}', index=False)
+        points_mileage = pd.read_sql('SELECT * FROM points_mileage', conn)
+        users_mileage_today = pd.read_sql('SELECT * FROM users_mileage', conn)
+        days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
+        week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
+        filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
+
+        with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
+            print('Запись листов')
+            users_mileage_today.to_excel(writer, sheet_name='Текущий пробег', index=False)
+            points_mileage.to_excel(writer, sheet_name='Все пробеги', index=False)
+            days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
+            week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
 
     except PermissionError as error:
         print(f"Ошибка экспорта, {error}")
