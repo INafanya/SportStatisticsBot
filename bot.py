@@ -45,7 +45,7 @@ async def main() -> None:
         scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
 
         scheduler.add_job(show_day_rating, 'cron', hour=8, minute=0, args=(bot,))
-        scheduler.add_job(show_day_time_rating, 'cron', hour=8, minute=1, args=(bot,))
+        #scheduler.add_job(show_day_time_rating, 'cron', hour=8, minute=1, args=(bot,))
 
         # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
         scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)

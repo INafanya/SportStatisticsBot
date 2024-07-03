@@ -7,7 +7,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, \
-    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db
+    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db, \
+    read_day_points_rating
 from Config.config_reader import admin, chat_id, botname
 
 from Keyboards.keyboards import make_row_keyboard
@@ -203,7 +204,8 @@ async def get_support(
 
 
 # отправка дневного рейтинга в общий чат
-async def show_day_rating(bot: Bot
+
+async def show_day_mileage_rating(bot: Bot
                           ):
     try:
         day_rating = read_day_rating()
@@ -271,18 +273,54 @@ async def show_day_time_rating(bot: Bot
     )
 
 
+async def show_day_points_rating(bot: Bot
+                                 ):
+    try:
+        day_rating = read_day_points_rating()
+        summ_mileage = 0
+        winners = ""
+        loosers = ""
+        delimiter = ""
+        yesterday = get_yesterday()
+
+        for (index, i) in enumerate(day_rating):
+            float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
+            summ_mileage += float_day_rating
+            if index <= 4:
+                winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating}\n"
+            elif index >= len(day_rating) - 3:
+                delimiter = f"...\n"
+                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating}\n"
+
+        text_answer = f"{winners}" \
+                      f"{delimiter}" \
+                      f"{loosers}"
+    except IndexError:
+        text_answer = f'Нет пробега за {yesterday}'
+
+    await bot.send_message(
+        chat_id,
+        f"#Итог_дня {yesterday}\n"
+        f"#Командные_баллы: {round(summ_mileage, 2)}\n"
+        f"\n"
+        f"{text_answer}"
+    )
+
+
+# Отправка дневного рейтинга ботом
+async def show_day_rating(bot: Bot):
+    await show_day_mileage_rating(bot)
+    await show_day_time_rating(bot)
+    await show_day_points_rating(bot)
+
 # Отправка дневного рейтинга по команде /day
 @router.message(F.chat.type == "supergroup", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot
                          ):
     if message.from_user.id in admin:
-        await show_day_rating(bot)
-
-@router.message(F.chat.type == "supergroup", Command("day_time"))
-async def cmd_day_time_rating(message: Message, bot: Bot
-                         ):
-    if message.from_user.id in admin:
+        await show_day_mileage_rating(bot)
         await show_day_time_rating(bot)
+        await show_day_points_rating(bot)
 
 
 async def show_week_rating(bot: Bot

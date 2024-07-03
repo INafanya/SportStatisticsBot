@@ -556,6 +556,35 @@ def read_day_time_rating():
         return results
 
 
+def read_day_points_rating():
+    try:
+        print("Считываю дневной рейтинг")
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        print("Подключение к SQLite успешно")
+        yesterday = get_yesterday()
+        cursor.execute('''
+                SELECT 
+                telegram_id,
+                fullname,
+                points
+                FROM day_mileage
+                WHERE date = ? AND mileage > 0
+                ORDER BY mileage DESC
+                ''', (yesterday,), )
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            results = cursor.fetchall()
+            conn.close()
+            print("Дневной рейтинг считан")
+            print("Соединение с SQLite закрыто")
+        return results
+
+
 def read_week_rating(): #исправить
     try:
         print("Считываю недельный рейтинг")
