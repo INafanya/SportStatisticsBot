@@ -541,7 +541,7 @@ def read_day_time_rating():
                 mileage_time
                 FROM day_mileage
                 WHERE date = ? AND mileage > 0
-                ORDER BY mileage DESC
+                ORDER BY mileage_time DESC
                 ''', (yesterday,), )
 
     except sqlite3.Error as error:
@@ -570,7 +570,7 @@ def read_day_points_rating():
                 points
                 FROM day_mileage
                 WHERE date = ? AND mileage > 0
-                ORDER BY mileage DESC
+                ORDER BY points DESC
                 ''', (yesterday,), )
 
     except sqlite3.Error as error:
