@@ -2,6 +2,8 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
 
+import xlsxwriter
+
 
 # создание БД
 def create_sql_db():
@@ -115,12 +117,16 @@ def read_user_statistics_from_db(telegram_id: int):
             category,
             day_mileage,
             day_mileage_time,
+            day_mileage_points,
             week_mileage,
             week_mileage_time,
+            week_mileage_points,
             month_mileage,
             month_mileage_time,
+            month_mileage_points,
             total_mileage,
-            total_mileage_time
+            total_mileage_time,
+            total_mileage_points
             FROM users_mileage 
             WHERE telegram_id = ?
             ''', (telegram_id,), )
@@ -132,10 +138,11 @@ def read_user_statistics_from_db(telegram_id: int):
         if conn:
             user_statistics = cursor.fetchone()
             conn.close()
-            #print("Соединение с SQLite закрыто")
+            print("Соединение с SQLite закрыто")
             return user_statistics
 
-# Новая версия запроса сегодняшней статистики по пользователю с балами
+
+# получение основной информации по пользователю
 def read_user_from_db(telegram_id: int):
     try:
         conn = sqlite3.connect('mileage.db')
@@ -157,9 +164,10 @@ def read_user_from_db(telegram_id: int):
         if conn:
             user_statistics = cursor.fetchone()
             conn.close()
-            #print("Соединение с SQLite закрыто")
+            print("Соединение с SQLite закрыто")
             return user_statistics
 
+# add new user in DB
 def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, category: str):
     try:
         conn = sqlite3.connect('mileage.db')
@@ -175,16 +183,19 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
                         category,
                         day_mileage,
                         day_mileage_time,
+                        day_mileage_points,
                         week_mileage,
                         week_mileage_time,
+                        week_mileage_points,
                         month_mileage,
                         month_mileage_time,
+                        month_mileage_points,
                         total_mileage,
-                        total_mileage_time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        total_mileage_time,
+                        total_mileage_points)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0,)
-                    )
-
+        )
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
 
@@ -192,16 +203,17 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
         if conn:
             conn.commit()
             conn.close()
-            #print("Соединение с SQLite закрыто")
+            print("Соединение с SQLite закрыто")
 
 
 # обновление дневного пробега в БД
-def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: int):
+def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: float, new_mileage_points: float):
     # получаем результат запроса статистики пользователя
     user_statistics = read_user_statistics_from_db(telegram_id)
     # обновляем дневной пробег пользователя
-    username, fullname, gender, category, day_mileage, day_mileage_time, week_mileage, week_mileage_time, \
-        month_mileage, month_mileage_time, total_mileage, total_mileage_time = user_statistics
+    username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage,\
+        week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, total_mileage,\
+        total_mileage_time, total_mileage_points = user_statistics
     # проверка на отрицательное значение, если новый побег отрицательный и больше текущего,
     # то сбрасывается текущий пробег
     if day_mileage + new_mileage < 0:
@@ -213,6 +225,7 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
         total_mileage_time -= day_mileage_time
         day_mileage = 0
         day_mileage_time = 0
+        day_mileage_points = 0
     else:
         day_mileage += new_mileage
         week_mileage += new_mileage
@@ -222,6 +235,10 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
         week_mileage_time += new_mileage_time
         month_mileage_time += new_mileage_time
         total_mileage_time += new_mileage_time
+        day_mileage_points += new_mileage_points
+        week_mileage_points += new_mileage_points
+        month_mileage_points += new_mileage_points
+        total_mileage_points += new_mileage_points
 
     try:
         conn = sqlite3.connect('mileage.db')
@@ -235,12 +252,16 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
                     category = ?,
                     day_mileage = ?,
                     day_mileage_time = ?,
+                    day_mileage_points = ?,
                     week_mileage = ?,
                     week_mileage_time = ?,
+                    week_mileage_points = ?,
                     month_mileage = ?,
                     month_mileage_time = ?,
+                    month_mileage_points = ?,
                     total_mileage = ?,
-                    total_mileage_time = ?
+                    total_mileage_time = ?,
+                    total_mileage_points = ?
                     WHERE 
                     telegram_id = ?
                     ''',
@@ -250,11 +271,15 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
                         category,
                         day_mileage,
                         day_mileage_time,
+                        day_mileage_points,
                         week_mileage,
+                        week_mileage_time,
                         week_mileage_time,
                         month_mileage,
                         month_mileage_time,
+                        month_mileage_time,
                         total_mileage,
+                        total_mileage_time,
                         total_mileage_time,
                         telegram_id)
                        )
@@ -268,7 +293,7 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
             conn.close()
             print("Соединение с SQLite закрыто")
 
-        return day_mileage, day_mileage_time
+        return day_mileage, day_mileage_time, day_mileage_points
 
 
 # обновление дневного пробега текущего дня в БД с вычислением балов
@@ -298,21 +323,21 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
     if new_mileage <= 1:
         coeff = 0.7943
     elif 1 < new_mileage <= 10:
-        coeff = pow(new_mileage/10, 0.1)
+        coeff = pow(new_mileage / 10, 0.1)
     elif 10 < new_mileage <= 42:
-        coeff = pow(new_mileage/10, 0.12)
+        coeff = pow(new_mileage / 10, 0.12)
     else:
         coeff = 1.1879 + (new_mileage - 42) * 0.00912506
-    #print(f"coeff = {coeff}")
-    #print(f"new_mileage = {new_mileage}")
-    #print(f"new_mileage_time = {new_mileage_time}")
+    # print(f"coeff = {coeff}")
+    # print(f"new_mileage = {new_mileage}")
+    # print(f"new_mileage_time = {new_mileage_time}")
 
     # расчет скорости с учетом коэффициента и пола
     if gender == 'царевна':
         speed = (72 * new_mileage * coeff) / new_mileage_time
     else:
         speed = (60 * new_mileage * coeff) / new_mileage_time
-    #print(f"speed = {speed}")
+    # print(f"speed = {speed}")
 
     # поиск ближайшей минимальной скорости из списка
     speed_points_keys = list(speed_points.keys())
@@ -320,8 +345,8 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         if speed_points_keys[i] // speed:
             speed_min = speed_points_keys[i - 1]
             speed_max = speed_points_keys[i]
-            #print(f"speed_min = {speed_min}")
-            #print(f"speed_max = {speed_max}")
+            # print(f"speed_min = {speed_min}")
+            # print(f"speed_max = {speed_max}")
             break
 
     # величина интервала
@@ -331,13 +356,12 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         points_dop = (speed - speed_min) / interval
     else:
         points_dop = speed - speed_min
-    #print(f"interval = {interval}")
-    #print(f"points_dop = {points_dop}")
+    # print(f"interval = {interval}")
+    # print(f"points_dop = {points_dop}")
 
     # баллы с учетом дистанции
     points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
-    #print(f"points_finish = {points_finish}")
-
+    # print(f"points_finish = {points_finish}")
 
     today = datetime.now().strftime('%d.%m.%Y')
 
@@ -359,6 +383,7 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
             conn.close()
             print("Соединение с SQLite закрыто")
         return points_finish
+
 
 # копирование и отчистка дневной статистики
 def copy_and_clear_day_mileage():
@@ -424,8 +449,12 @@ def copy_and_clear_week_mileage():
                     SELECT
                     telegram_id,
                     username,
+                    fullname,
+                    gender,
+                    category,
                     strftime('%W', datetime('now')) as date,
-                    week_mileage
+                    week_mileage,
+                    week_mileage_time
                     FROM users_mileage
                     ''')
 
@@ -527,6 +556,7 @@ def read_day_rating():
             print("Соединение с SQLite закрыто")
         return results
 
+
 def read_day_time_rating():
     try:
         print("Считываю дневной рейтинг")
@@ -585,7 +615,7 @@ def read_day_points_rating():
         return results
 
 
-def read_week_rating(): #исправить
+def read_week_rating():
     try:
         print("Считываю недельный рейтинг")
         conn = sqlite3.connect('mileage.db')
@@ -595,7 +625,7 @@ def read_week_rating(): #исправить
         cursor.execute('''
                     SELECT 
                     telegram_id,
-                    username,
+                    fullname,
                     mileage
                     FROM week_mileage
                     WHERE week = ? AND mileage > 0
@@ -614,7 +644,65 @@ def read_week_rating(): #исправить
         return results
 
 
-def read_month_rating(): # исправить
+def read_week_time_rating():
+    try:
+        print("Считываю дневной рейтинг")
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        print("Подключение к SQLite успешно")
+        yesterday = get_yesterday()
+        cursor.execute('''
+                SELECT 
+                telegram_id,
+                fullname,
+                mileage_time
+                FROM week_mileage
+                WHERE week = ? AND mileage > 0
+                ORDER BY mileage_time DESC
+                ''', (yesterday,), )
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            results = cursor.fetchall()
+            conn.close()
+            print("Дневной рейтинг считан")
+            print("Соединение с SQLite закрыто")
+        return results
+
+
+def read_week_points_rating():
+    try:
+        print("Считываю дневной рейтинг")
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        print("Подключение к SQLite успешно")
+        yesterday = get_yesterday()
+        cursor.execute('''
+                SELECT 
+                telegram_id,
+                fullname,
+                points
+                FROM week_mileage
+                WHERE week = ? AND mileage > 0
+                ORDER BY points DESC
+                ''', (yesterday,), )
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            results = cursor.fetchall()
+            conn.close()
+            print("Дневной рейтинг считан")
+            print("Соединение с SQLite закрыто")
+        return results
+
+
+def read_month_rating():  # исправить
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
@@ -686,13 +774,13 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
-
         with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
             print('Запись листов')
-            users_mileage_today.to_excel(writer, sheet_name='Текущий пробег', index=False)
-            points_mileage.to_excel(writer, sheet_name='Все пробеги', index=False)
+            users_mileage_today.to_excel(writer, sheet_name='Суммарная статистика', index=False)
+            points_mileage.to_excel(writer, sheet_name='Статистика по каждому пробегу', index=False)
             days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
             week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
+        # db_data.to_excel(fr'{filename}', index=False)
 
     except PermissionError as error:
         print(f"Ошибка экспорта, {error}")

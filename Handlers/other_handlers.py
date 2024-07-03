@@ -139,12 +139,14 @@ async def cmd_add_statistics(
         return
     else:
         # добавление пробега в БД
-        points_finish = update_today_data_db(telegram_id, new_mileage, new_mileage_time)
-        day_mileage, day_mileage_time = update_day_data_db(telegram_id, new_mileage, new_mileage_time)
+        new_mileage_points = update_today_data_db(telegram_id, new_mileage, new_mileage_time)
+        day_mileage, day_mileage_time, day_mileage_points = update_day_data_db(telegram_id, new_mileage, new_mileage_time, new_mileage_points)
 
         await message.reply(
             f"Новый пробег зафиксирован:\n"
-            f"{round(new_mileage, 2)} км. за {round(new_mileage_time, 2)} мин. Баллы: {round(points_finish, 2)}"
+            f"{round(new_mileage, 2)} км. за {round(new_mileage_time, 2)} мин. Баллы: {round(new_mileage_points, 2)}\n"
+            f"Итого за сегодня:\n"
+            f"{round(day_mileage, 2)} км. за {round(day_mileage_time, 2)} мин. Баллы: {round(day_mileage_points, 2)}"
         )
 
 
@@ -174,17 +176,18 @@ async def cmd_user_statistics(
     user_statistics = read_user_statistics_from_db(telegram_id)
 
     if user_statistics:
-        username, fullname, gender, category, day_mileage, day_mileage_time, week_mileage, week_mileage_time, \
-            month_mileage, month_mileage_time, total_mileage, total_mileage_time = user_statistics
+        username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage, \
+            week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points,\
+            total_mileage, total_mileage_time, total_mileage_points = user_statistics
 
         await bot.send_message(
             telegram_id,
             f"Твоя статистика бега за {datetime.now().strftime('%d.%m.%Y')}:\n"
             f"\n"
-            f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b> мин.\n"
-            f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км. за <b>{week_mileage_time}</b> мин.\n"
-            f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км. за <b>{month_mileage_time}</b> мин.\n"
-            f"Общий пробег: <b>{round(total_mileage, 2)}</b> км. за <b>{total_mileage_time}</b> мин."
+            f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км. за <b>{round(day_mileage_time, 2)}</b> мин., <b>{round(day_mileage_points, 2)}</b> баллов\n"
+            f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км. за <b>{round(week_mileage_time, 2)}</b> мин., <b>{round(week_mileage_points, 2)}</b> баллов\n"
+            f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км. за <b>{round(month_mileage_time, 2)}</b> мин., <b>{round(month_mileage_points, 2)}</b> баллов\n"
+            f"Общий пробег: <b>{round(total_mileage, 2)}</b> км. за <b>{round(total_mileage_time, 2)}</b> мин., <b>{round(total_mileage_points, 2)}</b> баллов"
         )
     else:
         await bot.send_message(

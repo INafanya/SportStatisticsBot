@@ -43,13 +43,10 @@ async def main() -> None:
         scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
         # суточный таймер. Обнуляет дневной пробег каждый день в 23:55
         scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
-
         scheduler.add_job(show_day_rating, 'cron', hour=8, minute=0, args=(bot,))
-        #scheduler.add_job(show_day_time_rating, 'cron', hour=8, minute=1, args=(bot,))
 
         # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
         scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
-
         scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=1, args=(bot,))
 
         # 4-х недельный таймер. Обнуляет и копирует пробег в каждое 4-е воскресенье в 23:58
