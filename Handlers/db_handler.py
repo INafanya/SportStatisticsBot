@@ -2,8 +2,6 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
 
-import xlsxwriter
-
 
 # создание БД
 def create_sql_db():
@@ -96,7 +94,7 @@ def create_sql_db():
         # cursor.close()
 
     except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
+        print("Ошибка при работе с SQLite при создании БД", error)
 
     finally:
         if conn:
@@ -132,13 +130,13 @@ def read_user_statistics_from_db(telegram_id: int):
             ''', (telegram_id,), )
 
     except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
+        print("Ошибка при работе с SQLite при чтении статистики пользователя", error)
 
     finally:
         if conn:
             user_statistics = cursor.fetchone()
             conn.close()
-            print("Соединение с SQLite закрыто")
+            print("Соединение с SQLite закрыто. Статистика пользователя считана")
             return user_statistics
 
 
@@ -167,6 +165,7 @@ def read_user_from_db(telegram_id: int):
             print("Соединение с SQLite закрыто")
             return user_statistics
 
+
 # add new user in DB
 def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, category: str):
     try:
@@ -194,7 +193,7 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
                         total_mileage_time,
                         total_mileage_points)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,)
+            ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         )
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -211,8 +210,8 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: f
     # получаем результат запроса статистики пользователя
     user_statistics = read_user_statistics_from_db(telegram_id)
 
-    username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage,\
-        week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, total_mileage,\
+    username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage, \
+        week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, total_mileage, \
         total_mileage_time, total_mileage_points = user_statistics
     # обновляем дневной пробег пользователя
     # проверка на отрицательное значение, если новый побег отрицательный и больше текущего,
@@ -329,16 +328,12 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         coeff = pow(new_mileage / 10, 0.12)
     else:
         coeff = 1.1879 + (new_mileage - 42) * 0.00912506
-    # print(f"coeff = {coeff}")
-    # print(f"new_mileage = {new_mileage}")
-    # print(f"new_mileage_time = {new_mileage_time}")
 
     # расчет скорости с учетом коэффициента и пола
     if gender == 'царевна':
         speed = (72 * new_mileage * coeff) / new_mileage_time
     else:
         speed = (60 * new_mileage * coeff) / new_mileage_time
-    # print(f"speed = {speed}")
 
     # поиск ближайшей минимальной скорости из списка
     speed_points_keys = list(speed_points.keys())
@@ -357,12 +352,9 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         points_dop = (speed - speed_min) / interval
     else:
         points_dop = speed - speed_min
-    # print(f"interval = {interval}")
-    # print(f"points_dop = {points_dop}")
 
     # баллы с учетом дистанции
     points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
-    # print(f"points_finish = {points_finish}")
 
     today = datetime.now().strftime('%d.%m.%Y')
 
@@ -404,15 +396,16 @@ def copy_and_clear_day_mileage():
             category,
             strftime('%d.%m.%Y', datetime('now')) as date,
             day_mileage,
-            day_mileage_time
+            day_mileage_time,
+            day_mileage_points
             FROM users_mileage
             ''')
 
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO day_mileage
-                        (telegram_id , username, fullname, gender, category, date, mileage, mileage_time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
+                        (telegram_id , username, fullname, gender, category, date, mileage, mileage_time, points)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
@@ -423,7 +416,7 @@ def copy_and_clear_day_mileage():
         print("Обнуляю дневную статистику")
         cursor.execute('''
             UPDATE users_mileage 
-            SET day_mileage = 0, day_mileage_time = 0
+            SET day_mileage = 0, day_mileage_time = 0, day_mileage_points = 0
             ''')
         conn.commit()
         print("Обнуление дневной статистики завершено")
@@ -455,22 +448,23 @@ def copy_and_clear_week_mileage():
                     category,
                     strftime('%W', datetime('now')) as date,
                     week_mileage,
-                    week_mileage_time
+                    week_mileage_time,
+                    week_mileage_points
                     FROM users_mileage
                     ''')
 
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO week_mileage
-                       (telegram_id , username, week, mileage)
-                       VALUES (?, ?, ?, ?)'''
+                       (telegram_id , username, fullname, gender, category, week, mileage, mileage_time, points)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
         print("Записи успешно вставлены в таблицу", cursor.rowcount)
 
         # удаляем недельную статистику в таблице users_mileage
-        cursor.execute('''UPDATE users_mileage SET week_mileage = 0''')
+        cursor.execute('''UPDATE users_mileage SET week_mileage = 0, week_mileage_time = 0, week_mileage_points = 0''')
 
         # сохраняем изменения в базе данных
         conn.commit()
@@ -498,23 +492,29 @@ def copy_and_clear_month_mileage():
                     SELECT 
                     telegram_id,
                     username,
+                    fullname,
+                    gender,
+                    category,
                     strftime('%m', datetime('now')) as date,
-                    month_mileage
+                    month_mileage,
+                    month_mileage_time,
+                    month_mileage_points
                     FROM users_mileage
                     ''')
 
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO month_mileage
-                                (telegram_id , username, month, mileage)
-                                VALUES (?, ?, ?, ?)'''
+                                (telegram_id , username, fullname, gender, category, month, mileage, mileage_time, points)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
         conn.commit()
         print("Записи успешно вставлены в таблицу", cursor.rowcount)
 
         # удаляем месячную статистику в таблице users_mileage
-        cursor.execute('''UPDATE users_mileage SET month_mileage = 0''')
+        cursor.execute(
+            '''UPDATE users_mileage SET month_mileage = 0, month_mileage_time = 0, month_mileage_points = 0''')
 
         # сохраняем изменения в базе данных
         conn.commit()
