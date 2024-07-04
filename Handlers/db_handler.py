@@ -464,7 +464,8 @@ def copy_and_clear_week_mileage():
         print("Записи успешно вставлены в таблицу", cursor.rowcount)
 
         # удаляем недельную статистику в таблице users_mileage
-        cursor.execute('''UPDATE users_mileage SET week_mileage = 0, week_mileage_time = 0, week_mileage_points = 0''')
+        cursor.execute('''UPDATE users_mileage
+                            SET week_mileage = 0, week_mileage_time = 0, week_mileage_points = 0''')
 
         # сохраняем изменения в базе данных
         conn.commit()
@@ -505,7 +506,7 @@ def copy_and_clear_month_mileage():
         result_db = cursor.fetchall()
 
         sql_query = '''INSERT INTO month_mileage
-                                (telegram_id , username, fullname, gender, category, month, mileage, mileage_time, points)
+                        (telegram_id , username, fullname, gender, category, month, mileage, mileage_time, points)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'''
 
         cursor.executemany(sql_query, result_db)
@@ -775,13 +776,68 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
+        df_1 = pd.read_sql('''SELECT username as Богатыри_1, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'богатырь' AND category = 1 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+        df_2_start_row = df_1.shape[0] + 3
+        df_2 = pd.read_sql('''SELECT username as Богатыри_2, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'богатырь' AND category = 2 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+        df_3_start_row = df_2_start_row + df_2.shape[0] + 3
+        df_3 = pd.read_sql('''SELECT username as Богатыри_3, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'богатырь' AND category = 3 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+
+        df_4 = pd.read_sql('''SELECT username as Царевны_1, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'царевна' AND category = 1 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+        df_5_start_row = df_4.shape[0] + 3
+        df_5 = pd.read_sql('''SELECT username as Царевны_2, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'царевна' AND category = 2 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+        df_6_start_row = df_5.shape[0] + df_5_start_row + 3
+        df_6 = pd.read_sql('''SELECT username as Царевны_3, total_mileage as Пробег
+                            FROM users_mileage
+                            WHERE gender = 'царевна' AND category = 3 AND total_mileage > 0
+                            ORDER BY total_mileage DESC 
+                            ''', conn)
+        df_7_start_row = df_3.shape[0] + df_3_start_row + 3
+        df_7 = pd.read_sql('''SELECT username as Имя, total_mileage_time as Суммарное_время
+                                    FROM users_mileage
+                                    WHERE total_mileage_time > 0
+                                    ORDER BY total_mileage_time DESC 
+                                    ''', conn)
+        df_8_start_row = df_6.shape[0] + df_6_start_row + 3
+        df_8 = pd.read_sql('''SELECT username as Имя, round(total_mileage_points, 2) as Суммарные_баллы
+                                            FROM users_mileage
+                                            WHERE total_mileage_points > 0
+                                            ORDER BY total_mileage_points DESC 
+                                            ''', conn)
+
         with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
             print('Запись листов')
             users_mileage_today.to_excel(writer, sheet_name='Суммарная статистика', index=False)
             points_mileage.to_excel(writer, sheet_name='Статистика по каждому пробегу', index=False)
             days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
             week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
-        # db_data.to_excel(fr'{filename}', index=False)
+            df_1.to_excel(writer, sheet_name='Сводные таблицы', index=False)
+            df_2.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_2_start_row)
+            df_3.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_3_start_row)
+            df_4.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4)
+            df_5.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4, startrow=df_5_start_row)
+            df_6.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4, startrow=df_6_start_row)
+            df_7.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_7_start_row)
+            df_8.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4, startrow=df_8_start_row)
 
     except PermissionError as error:
         print(f"Ошибка экспорта, {error}")
