@@ -194,7 +194,7 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
                         total_mileage_time,
                         total_mileage_points)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0,)
+            ''', (telegram_id, username, fullname, gender, category, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,)
         )
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
