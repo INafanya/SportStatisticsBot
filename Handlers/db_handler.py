@@ -776,49 +776,49 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
-        df_1 = pd.read_sql('''SELECT username as Богатыри_1, total_mileage as Пробег
+        df_1 = pd.read_sql('''SELECT fullname as Богатыри_1, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_2_start_row = df_1.shape[0] + 3
-        df_2 = pd.read_sql('''SELECT username as Богатыри_2, total_mileage as Пробег
+        df_2 = pd.read_sql('''SELECT fullname as Богатыри_2, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_3_start_row = df_2_start_row + df_2.shape[0] + 3
-        df_3 = pd.read_sql('''SELECT username as Богатыри_3, total_mileage as Пробег
+        df_3 = pd.read_sql('''SELECT fullname as Богатыри_3, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
 
-        df_4 = pd.read_sql('''SELECT username as Царевны_1, total_mileage as Пробег
+        df_4 = pd.read_sql('''SELECT fullname as Царевны_1, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_5_start_row = df_4.shape[0] + 3
-        df_5 = pd.read_sql('''SELECT username as Царевны_2, total_mileage as Пробег
+        df_5 = pd.read_sql('''SELECT fullname as Царевны_2, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_6_start_row = df_5.shape[0] + df_5_start_row + 3
-        df_6 = pd.read_sql('''SELECT username as Царевны_3, total_mileage as Пробег
+        df_6 = pd.read_sql('''SELECT fullname as Царевны_3, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_7_start_row = df_3.shape[0] + df_3_start_row + 3
-        df_7 = pd.read_sql('''SELECT username as Имя, total_mileage_time as Суммарное_время
+        df_7 = pd.read_sql('''SELECT fullname as Имя, total_mileage_time as Суммарное_время
                                     FROM users_mileage
                                     WHERE total_mileage_time > 0
                                     ORDER BY total_mileage_time DESC 
                                     ''', conn)
         df_8_start_row = df_6.shape[0] + df_6_start_row + 3
-        df_8 = pd.read_sql('''SELECT username as Имя, round(total_mileage_points, 2) as Суммарные_баллы
+        df_8 = pd.read_sql('''SELECT fullname as Имя, round(total_mileage_points, 2) as Суммарные_баллы
                                             FROM users_mileage
                                             WHERE total_mileage_points > 0
                                             ORDER BY total_mileage_points DESC 
