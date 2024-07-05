@@ -812,13 +812,13 @@ def export_data_to_file():
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_7_start_row = df_3.shape[0] + df_3_start_row + 3
-        df_7 = pd.read_sql('''SELECT fullname as Имя, total_mileage_time as Суммарное_время
+        df_7 = pd.read_sql('''SELECT fullname as Имя, total_mileage_time as Время
                                     FROM users_mileage
                                     WHERE total_mileage_time > 0
                                     ORDER BY total_mileage_time DESC 
                                     ''', conn)
         df_8_start_row = df_6.shape[0] + df_6_start_row + 3
-        df_8 = pd.read_sql('''SELECT fullname as Имя, round(total_mileage_points, 2) as Суммарные_баллы
+        df_8 = pd.read_sql('''SELECT fullname as Имя, round(total_mileage_points, 2) as Баллы
                                             FROM users_mileage
                                             WHERE total_mileage_points > 0
                                             ORDER BY total_mileage_points DESC 
