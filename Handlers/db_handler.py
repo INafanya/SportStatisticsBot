@@ -328,13 +328,13 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         coeff = pow(new_mileage / 10, 0.12)
     else:
         coeff = 1.1879 + (new_mileage - 42) * 0.00912506
-
+    print(f"Коэффициент = {coeff}")
     # расчет скорости с учетом коэффициента и пола
     if gender == 'царевна':
         speed = (72 * new_mileage * coeff) / new_mileage_time
     else:
         speed = (60 * new_mileage * coeff) / new_mileage_time
-
+    print(f"Скорость = {speed}")
     # поиск ближайшей минимальной скорости из списка
     speed_points_keys = list(speed_points.keys())
     for i in range(0, len(speed_points_keys)):
@@ -344,7 +344,8 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
             # print(f"speed_min = {speed_min}")
             # print(f"speed_max = {speed_max}")
             break
-
+    print(f"Минимальная скорость = {speed_min}")
+    print(f"Максимальная скорость = {speed_max}")
     # величина интервала
     interval = speed_max - speed_min
     # дробная часть баллов
@@ -352,10 +353,13 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
         points_dop = (speed - speed_min) / interval
     else:
         points_dop = speed - speed_min
-
+    print(f"Дробная часть баллов = {points_dop}")
     # баллы с учетом дистанции
-    points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
-
+    if speed < 6.666666667:
+        points_finish = 0
+    else:
+        points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
+    print(f"Баллы = {points_finish}")
     today = datetime.now().strftime('%d.%m.%Y')
 
     sql_txt = f'''INSERT INTO points_mileage
