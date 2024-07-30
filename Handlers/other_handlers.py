@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+import datetime
 from aiogram import Router, F, Bot, types
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
@@ -23,6 +23,9 @@ class Znakomstvo(StatesGroup):
     add_name = State()
     choosing_genders = State()
     choosing_categories = State()
+
+def convert_seconds(seconds):
+    return str(datetime.timedelta(seconds=seconds))
 
 
 # Обработчик сообщения команды /start
@@ -95,16 +98,13 @@ async def category_incorrectly(message: Message):
 
 # Обработчик команды добавления новой статистики /д
 @router.message(F.chat.type == "supergroup", Command("д"))
-async def cmd_add_statistics(
-        message: Message,
-        command: CommandObject
-):
+async def cmd_add_statistics(message: Message, command: CommandObject):
     telegram_id = message.from_user.id
     # Обработка ошибок ввода пробега
     try:
         new_mileage = float(command.args.split()[0])
         new_mileage_time = command.args.split()[1]
-        print(new_mileage_time)
+        print(f'Время пробега: {new_mileage_time}')
         # пробег и время число?
     except ValueError:
         await message.reply("Укажите пробег и время числом")
@@ -128,7 +128,7 @@ async def cmd_add_statistics(
         await message.reply("Слишком много аргументов")
         return
     elif len(new_mileage_time) != 8:
-        await message.reply("Неверный формат времени. Необходимо ввести в формате: ЧЧ:ММ:СС")
+        await message.reply("Неверный формат времени. Формат времени: ЧЧ:ММ:СС")
         return
     elif new_mileage == 0:
         await message.reply("Пробег и время должны быть больше 0")
@@ -141,32 +141,31 @@ async def cmd_add_statistics(
         # перевод времени в секунды
         new_mileage_time_seconds = int(new_mileage_time[:2]) * 3600 + int(new_mileage_time[3:5]) * 60 + int(
             new_mileage_time[6:])
-
-        if (new_mileage_time_seconds / new_mileage) < 120:
+        print(f' Время пробега в секундах: {new_mileage_time_seconds}')
+        print(f'Темп: {(new_mileage_time_seconds / 60) / new_mileage}')
+        if ((new_mileage_time_seconds / 60) / new_mileage) < 2:
             await message.reply(f"У нас новый мировой рекорд! Или нет?\n"
                                 f"Темп не может быть выше 2 мин./км.")
             return
-        print(new_mileage_time_seconds)
         new_mileage_points = update_today_data_db(telegram_id, new_mileage, new_mileage_time_seconds)
-        day_mileage, day_mileage_time, day_mileage_points = update_day_data_db(telegram_id, new_mileage,
-                                                                               new_mileage_time, new_mileage_points)
+        day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, new_mileage,
+                                                                        new_mileage_time_seconds, new_mileage_points)
+        day_mileage_time = convert_seconds(day_mileage_time_seconds)
 
         await message.reply(
             f"Новый пробег зафиксирован:\n"
-            f"{round(new_mileage, 2)} км. за {round(new_mileage_time, 2)} мин. Баллы: {round(new_mileage_points, 2)}\n"
+            f"{round(new_mileage, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
             f"Итого за сегодня:\n"
-            f"{round(day_mileage, 2)} км. за {round(day_mileage_time, 2)} мин. Баллы: {round(day_mileage_points, 2)}"
+            f"{round(day_mileage, 2)} км. за {day_mileage_time}. Баллы: {round(day_mileage_points, 2)}"
         )
 
 
 
 # обработчика команды /помощь
 @router.message(F.chat.type == "supergroup", Command("помощь"))
-async def cmd_help(
-        message: Message,
-):
+async def cmd_help(message: Message):
     await message.reply(
-        f"Для работы с ботом нажми {botname}\n"
+        f"Для участия в челендже, зарегистрируйся: {botname}\n"
         f"Добавление пробега:\n"
         f"/д км.км мин\n"
         f"Уменьшение пробега:\n"
@@ -178,29 +177,31 @@ async def cmd_help(
 
 # обработчика команды /стат
 @router.message(Command("statistics"))
-async def cmd_user_statistics(
-        message: Message,
-        bot: Bot
-):
+async def cmd_user_statistics(message: Message, bot: Bot):
     telegram_id = message.from_user.id
     user_statistics = read_user_statistics_from_db(telegram_id)
 
     if user_statistics:
-        username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage, \
-            week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, \
-            total_mileage, total_mileage_time, total_mileage_points = user_statistics
+        username, fullname, gender, category, day_mileage, day_mileage_time_seconds, day_mileage_points, week_mileage, \
+            week_mileage_time_seconds, week_mileage_points, month_mileage, month_mileage_time_seconds, \
+            month_mileage_points, total_mileage, total_mileage_time_seconds, total_mileage_points = user_statistics
+
+        day_mileage_time = convert_seconds(day_mileage_time_seconds)
+        week_mileage_time = convert_seconds(week_mileage_time_seconds)
+        month_mileage_time = convert_seconds(month_mileage_time_seconds)
+        total_mileage_time = convert_seconds(total_mileage_time_seconds)
 
         await bot.send_message(
             telegram_id,
-            f"Твоя статистика бега за {datetime.now().strftime('%d.%m.%Y')}:\n"
+            f"Твоя статистика бега за {datetime.datetime.now().strftime('%d.%m.%Y')}:\n"
             f"\n"
-            f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км. за <b>{round(day_mileage_time, 2)}</b> мин., "
+            f"Дневной пробег: <b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>, "
             f"<b>{round(day_mileage_points, 2)}</b> баллов\n"
-            f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км. за <b>{round(week_mileage_time, 2)}</b> мин., "
+            f"Недельный пробег: <b>{round(week_mileage, 2)}</b> км. за <b>{week_mileage_time}</b>, "
             f"<b>{round(week_mileage_points, 2)}</b> баллов\n"
-            f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км. за <b>{round(month_mileage_time, 2)}</b> мин., "
+            f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км. за <b>{month_mileage_time}</b>, "
             f"<b>{round(month_mileage_points, 2)}</b> баллов\n"
-            f"Общий пробег: <b>{round(total_mileage, 2)}</b> км. за <b>{round(total_mileage_time, 2)}</b> мин., "
+            f"Общий пробег: <b>{round(total_mileage, 2)}</b> км. за <b>{total_mileage_time}</b>, "
             f"<b>{round(total_mileage_points, 2)}</b> баллов"
         )
     else:
@@ -211,9 +212,7 @@ async def cmd_user_statistics(
 
 
 @router.message(Command("support"))
-async def get_support(
-        message: Message,
-        bot: Bot):
+async def get_support(message: Message, bot: Bot):
     await bot.send_message(
         message.from_user.id,
         f"Напишите нам: @AVSolovyov"
@@ -265,13 +264,13 @@ async def show_day_time_rating(bot: Bot):
         yesterday = get_yesterday()
 
         for (index, i) in enumerate(day_rating):
-            float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
-            summ_mileage += float_day_rating
+            day_time_rating_seconds = day_rating[index][2]
+            summ_mileage += day_time_rating_seconds
             if index <= 4:
-                winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} мин.\n"
+                winners += f"{index + 1}. {day_rating[index][1]} - {convert_seconds(day_time_rating_seconds)}\n"
             elif index >= len(day_rating) - 3:
                 delimiter = f"...\n"
-                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} мин.\n"
+                loosers += f"{index + 1}. {day_rating[index][1]} - {convert_seconds(day_time_rating_seconds)}\n"
 
         text_answer = f"{winners}" \
                       f"{delimiter}" \
@@ -282,7 +281,7 @@ async def show_day_time_rating(bot: Bot):
     await bot.send_message(
         chat_id,
         f"#Итог_дня {yesterday}\n"
-        f"#Командное_время: {round(summ_mileage, 2)}мин.\n"
+        f"#Командное_время: {convert_seconds(summ_mileage)}\n"
         f"\n"
         f"{text_answer}"
     )
@@ -365,13 +364,13 @@ async def show_week_time_rating(bot: Bot):
         yesterweek = get_yesterweek()
 
         for (index, i) in enumerate(week_rating):
-            float_week_rating = round(float(str(week_rating[index][2]).replace(',', '.')), 2)
-            summ_mileage += float_week_rating
+            week_rating_seconds = week_rating[index][2]
+            summ_mileage += week_rating_seconds
             if index <= 4:
-                winners += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} мин.\n"
+                winners += f"{index + 1}. {week_rating[index][1]} - {convert_seconds(week_rating_seconds)}\n"
             elif index >= len(week_rating) - 3:
                 delimiter = f"...\n"
-                loosers += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} мин.\n"
+                loosers += f"{index + 1}. {week_rating[index][1]} - {convert_seconds(week_rating_seconds)}\n"
 
         text_answer = f"{winners}" \
                       f"{delimiter}" \
@@ -382,7 +381,7 @@ async def show_week_time_rating(bot: Bot):
     await bot.send_message(
         chat_id,
         f"#Рейтинг_недели {yesterweek}\n"
-        f"#Командное_время: {round(summ_mileage, 2)}мин.\n"
+        f"#Командное_время: {convert_seconds(summ_mileage)}\n"
         f"\n"
         f"{text_answer}"
     )
@@ -442,24 +441,17 @@ async def show_week_rating(bot: Bot):
     await show_week_points_rating(bot)
 
 
-# Отправка дневного рейтинга по команде /day
-@router.message(F.chat.type == "supergroup", Command("day"))
+# Отправка дневного рейтинга по команде /week
+@router.message(F.chat.type == "supergroup", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot):
     if message.from_user.id in admin:
         await show_week_mileage_rating(bot)
         await show_week_time_rating(bot)
         await show_week_points_rating(bot)
-@router.message(F.chat.type == "supergroup", Command("week"))
-async def cmd_week_rating(message: Message, bot: Bot):
-    if message.from_user.id in admin:
-        await show_week_rating(bot)
 
 
 @router.message(F.chat.type == "private", Command("файл"))
-async def cmd_export_data_to_file(
-        message: types.Document,
-        bot: Bot,
-):
+async def cmd_export_data_to_file(message: types.Document, bot: Bot):
     if message.from_user.id in admin:
         filename = export_data_to_file()
 
@@ -482,8 +474,8 @@ async def chat_new_user_added(message: Message):
     for user in message.new_chat_members:
         content = Text(
             "Привет, ", Bold(user.full_name), ".\n"
-                                              "Для начала, познакомься с ботом: https://t.me/SportStatistics_bot\n"
-                                              "Справка по боту: /помощь"
+            "Для участия в челендже, зарегистрируйся: https://t.me/SportStatistics_bot\n"
+            "Справка по боту: /помощь"
         )
         await message.reply(
             **content.as_kwargs()

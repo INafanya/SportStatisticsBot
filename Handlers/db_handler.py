@@ -18,16 +18,16 @@ def create_sql_db():
                         gender TEXT,
                         category INTEGER,
                         day_mileage FLOAT,
-                        day_mileage_time FLOAT,
+                        day_mileage_time INTEGER,
                         day_mileage_points FLOAT,
                         week_mileage FLOAT,
-                        week_mileage_time FLOAT,
+                        week_mileage_time INTEGER,
                         week_mileage_points FLOAT,
                         month_mileage FLOAT,
-                        month_mileage_time FLOAT,
+                        month_mileage_time INTEGER,
                         month_mileage_points FLOAT,
                         total_mileage FLOAT,
-                        total_mileage_time FLOAT,
+                        total_mileage_time INTEGER,
                         total_mileage_points FLOAT
                     )
                     ''')
@@ -41,7 +41,7 @@ def create_sql_db():
                                 category INTEGER,
                                 date DATE,
                                 mileage FLOAT,
-                                mileage_time FLOAT,
+                                mileage_time INTEGER,
                                 points FLOAT
                             )
                             ''')
@@ -56,7 +56,7 @@ def create_sql_db():
                         category INTEGER,
                         date DATE,
                         mileage FLOAT,
-                        mileage_time FLOAT,
+                        mileage_time INTEGER,
                         points FLOAT
                     )
                     ''')
@@ -71,7 +71,7 @@ def create_sql_db():
                         category INTEGER,
                         week DATE,
                         mileage FLOAT,
-                        mileage_time FLOAT,
+                        mileage_time INTEGER,
                         points FLOAT
                     )
                     ''')
@@ -86,7 +86,7 @@ def create_sql_db():
                         category INTEGER,
                         month DATE,
                         mileage FLOAT,
-                        mileage_time FLOAT,
+                        mileage_time INTEGER,
                         points FLOAT
                     )
                     ''')
@@ -166,7 +166,7 @@ def read_user_from_db(telegram_id: int):
             return user_statistics
 
 
-# add new user in DB
+# добавление нового пользователя в БД
 def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, category: str):
     try:
         conn = sqlite3.connect('mileage.db')
@@ -205,14 +205,102 @@ def add_new_user(telegram_id: int, username: str, fullname: str, gender: str, ca
             print("Соединение с SQLite закрыто")
 
 
+# обновление дневного пробега текущего дня в БД с вычислением балов
+def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time: int):
+    speed_points = {
+        6.666666667: 0,
+        7.058823529: 1,
+        7.5: 2,
+        8.0: 3,
+        8.571428571: 4,
+        9.230769231: 5,
+        10.0: 6,
+        10.90909091: 7,
+        12.0: 8,
+        13.33333333: 9,
+        15.50387597: 10,
+        16.90140845: 11,
+        18.09408926: 12,
+        19.46156341: 13,
+    }
+
+    # получение данных пользователя
+    user = read_user_from_db(telegram_id)
+    username, fullname, gender, category = user
+
+    # расчет коэффициента с учетом расстояния
+    if new_mileage <= 1:
+        coeff = 0.7943
+    elif 1 < new_mileage <= 10:
+        coeff = pow(new_mileage / 10, 0.1)
+    elif 10 < new_mileage <= 42:
+        coeff = pow(new_mileage / 10, 0.12)
+    else:
+        coeff = 1.1879 + (new_mileage - 42) * 0.00912506
+    print(f"Коэффициент = {coeff}")
+    # расчет скорости с учетом коэффициента и пола
+    if gender == 'царевна':
+        speed = (72 * new_mileage * coeff) * 60 / new_mileage_time
+    else:
+        speed = (60 * new_mileage * coeff) * 60 / new_mileage_time
+    print(f"Скорость = {speed}")
+    if speed > 19.46:
+        speed = 19.46
+    # поиск ближайшей минимальной скорости из списка
+    speed_points_keys = list(speed_points.keys())
+    for i in range(0, len(speed_points_keys)):
+        if speed_points_keys[i] // speed:
+            speed_min = speed_points_keys[i - 1]
+            speed_max = speed_points_keys[i]
+            # print(f"speed_min = {speed_min}")
+            # print(f"speed_max = {speed_max}")
+            break
+    print(f"Минимальная скорость = {speed_min}")
+    print(f"Максимальная скорость = {speed_max}")
+    # величина интервала
+    interval = speed_max - speed_min
+    # дробная часть баллов
+    if interval:
+        points_dop = (speed - speed_min) / interval
+    else:
+        points_dop = speed - speed_min
+    print(f"Дробная часть баллов = {points_dop}")
+    # баллы с учетом дистанции
+    if speed < 6.666666667:
+        points_finish = 0
+    else:
+        points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
+    print(f"Баллы = {points_finish}")
+    today = datetime.now().strftime('%d.%m.%Y')
+
+    sql_txt = f'''INSERT INTO points_mileage
+                (telegram_id, username, fullname, gender, category, date, mileage, mileage_time, points)
+                VALUES ({telegram_id}, '{username}', '{fullname}', '{gender}', {category}, 
+                '{today}', {new_mileage}, {new_mileage_time}, {points_finish})'''
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute(sql_txt)
+        conn.commit()
+
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+
+    finally:
+        if conn:
+            conn.close()
+            print("Соединение с SQLite закрыто")
+        return points_finish
+
 # обновление дневного пробега в БД
-def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: float, new_mileage_points: float):
+def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: int, new_mileage_points: float):
     # получаем результат запроса статистики пользователя
     user_statistics = read_user_statistics_from_db(telegram_id)
 
     username, fullname, gender, category, day_mileage, day_mileage_time, day_mileage_points, week_mileage, \
-        week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, total_mileage, \
-        total_mileage_time, total_mileage_points = user_statistics
+        week_mileage_time, week_mileage_points, month_mileage, month_mileage_time, month_mileage_points, \
+        total_mileage, total_mileage_time, total_mileage_points = user_statistics
+    print(user_statistics)
     # обновляем дневной пробег пользователя
     # проверка на отрицательное значение, если новый побег отрицательный и больше текущего,
     # то сбрасывается текущий пробег
@@ -294,92 +382,6 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: f
             print("Соединение с SQLite закрыто")
 
         return day_mileage, day_mileage_time, day_mileage_points
-
-
-# обновление дневного пробега текущего дня в БД с вычислением балов
-def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time: int):
-    speed_points = {
-        6.666666667: 0,
-        7.058823529: 1,
-        7.5: 2,
-        8.0: 3,
-        8.571428571: 4,
-        9.230769231: 5,
-        10.0: 6,
-        10.90909091: 7,
-        12.0: 8,
-        13.33333333: 9,
-        15.50387597: 10,
-        16.90140845: 11,
-        18.09408926: 12,
-        19.46156341: 13,
-    }
-
-    # получение данных пользователя
-    user = read_user_from_db(telegram_id)
-    username, fullname, gender, category = user
-
-    # расчет коэффициента с учетом расстояния
-    if new_mileage <= 1:
-        coeff = 0.7943
-    elif 1 < new_mileage <= 10:
-        coeff = pow(new_mileage / 10, 0.1)
-    elif 10 < new_mileage <= 42:
-        coeff = pow(new_mileage / 10, 0.12)
-    else:
-        coeff = 1.1879 + (new_mileage - 42) * 0.00912506
-    #print(f"Коэффициент = {coeff}")
-    # расчет скорости с учетом коэффициента и пола
-    if gender == 'царевна':
-        speed = (72 * new_mileage * coeff) / new_mileage_time
-    else:
-        speed = (60 * new_mileage * coeff) / new_mileage_time
-    #print(f"Скорость = {speed}")
-    # поиск ближайшей минимальной скорости из списка
-    speed_points_keys = list(speed_points.keys())
-    for i in range(0, len(speed_points_keys)):
-        if speed_points_keys[i] // speed:
-            speed_min = speed_points_keys[i - 1]
-            speed_max = speed_points_keys[i]
-            # print(f"speed_min = {speed_min}")
-            # print(f"speed_max = {speed_max}")
-            break
-    #print(f"Минимальная скорость = {speed_min}")
-    #print(f"Максимальная скорость = {speed_max}")
-    # величина интервала
-    interval = speed_max - speed_min
-    # дробная часть баллов
-    if interval:
-        points_dop = (speed - speed_min) / interval
-    else:
-        points_dop = speed - speed_min
-    #print(f"Дробная часть баллов = {points_dop}")
-    # баллы с учетом дистанции
-    if speed < 6.666666667:
-        points_finish = 0
-    else:
-        points_finish = (speed_points.get(speed_min) + points_dop) * new_mileage / 10
-    #print(f"Баллы = {points_finish}")
-    today = datetime.now().strftime('%d.%m.%Y')
-
-    sql_txt = f'''INSERT INTO points_mileage
-                (telegram_id, username, fullname, gender, category, date, mileage, mileage_time, points)
-                VALUES ({telegram_id}, '{username}', '{fullname}', '{gender}', {category}, 
-                '{today}', {new_mileage}, {new_mileage_time}, {points_finish})'''
-    try:
-        conn = sqlite3.connect('mileage.db')
-        cursor = conn.cursor()
-        cursor.execute(sql_txt)
-        conn.commit()
-
-    except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
-
-    finally:
-        if conn:
-            conn.close()
-            print("Соединение с SQLite закрыто")
-        return points_finish
 
 
 # копирование и отчистка дневной статистики
@@ -656,7 +658,7 @@ def read_week_time_rating():
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
         print("Подключение к SQLite успешно")
-        yesterday = get_yesterday()
+        yesterweek = get_yesterweek()
         cursor.execute('''
                 SELECT 
                 telegram_id,
@@ -665,7 +667,7 @@ def read_week_time_rating():
                 FROM week_mileage
                 WHERE week = ? AND mileage > 0
                 ORDER BY mileage_time DESC
-                ''', (yesterday,), )
+                ''', (yesterweek,), )
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -685,7 +687,7 @@ def read_week_points_rating():
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()
         print("Подключение к SQLite успешно")
-        yesterday = get_yesterday()
+        yesterweek = get_yesterweek()
         cursor.execute('''
                 SELECT 
                 telegram_id,
@@ -694,7 +696,7 @@ def read_week_points_rating():
                 FROM week_mileage
                 WHERE week = ? AND mileage > 0
                 ORDER BY points DESC
-                ''', (yesterday,), )
+                ''', (yesterweek,), )
 
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite", error)
@@ -780,53 +782,54 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
-        df_1 = pd.read_sql('''SELECT fullname as Богатыри_1, total_mileage as Пробег
+        df_1 = pd.read_sql('''SELECT username as Богатыри_1, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_2_start_row = df_1.shape[0] + 3
-        df_2 = pd.read_sql('''SELECT fullname as Богатыри_2, total_mileage as Пробег
+        df_2 = pd.read_sql('''SELECT username as Богатыри_2, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_3_start_row = df_2_start_row + df_2.shape[0] + 3
-        df_3 = pd.read_sql('''SELECT fullname as Богатыри_3, total_mileage as Пробег
+        df_3 = pd.read_sql('''SELECT username as Богатыри_3, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'богатырь' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
 
-        df_4 = pd.read_sql('''SELECT fullname as Царевны_1, total_mileage as Пробег
+        df_4 = pd.read_sql('''SELECT username as Царевны_1, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_5_start_row = df_4.shape[0] + 3
-        df_5 = pd.read_sql('''SELECT fullname as Царевны_2, total_mileage as Пробег
+        df_5 = pd.read_sql('''SELECT username as Царевны_2, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_6_start_row = df_5.shape[0] + df_5_start_row + 3
-        df_6 = pd.read_sql('''SELECT fullname as Царевны_3, total_mileage as Пробег
+        df_6 = pd.read_sql('''SELECT username as Царевны_3, total_mileage as Пробег
                             FROM users_mileage
                             WHERE gender = 'царевна' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_7_start_row = df_3.shape[0] + df_3_start_row + 3
-        df_7 = pd.read_sql('''SELECT fullname as Имя, total_mileage_time as Время
+        df_7 = pd.read_sql('''SELECT username as Имя, total_mileage_time as Суммарное_время
                                     FROM users_mileage
                                     WHERE total_mileage_time > 0
                                     ORDER BY total_mileage_time DESC 
                                     ''', conn)
         df_8_start_row = df_6.shape[0] + df_6_start_row + 3
-        df_8 = pd.read_sql('''SELECT fullname as Имя, round(total_mileage_points, 2) as Баллы
+        df_8 = pd.read_sql('''SELECT username as Имя, round(total_mileage_points, 2) as Суммарные_баллы
                                             FROM users_mileage
                                             WHERE total_mileage_points > 0
                                             ORDER BY total_mileage_points DESC 
                                             ''', conn)
+
 
         with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
             print('Запись листов')
