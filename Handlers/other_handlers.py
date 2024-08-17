@@ -4,25 +4,38 @@ from aiogram import Router, F, Bot, types
 from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, FSInputFile, ReplyKeyboardRemove
+from aiogram.types import (Message, FSInputFile, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton,
+                           CallbackQuery)
 from aiogram.utils.formatting import Text, Bold
-from Handlers.db_handler import read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, \
-    get_yesterday, get_yesterweek, export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db, \
-    read_day_points_rating, read_week_time_rating, read_week_points_rating
-from Config.config_reader import admin, chat_id, botname
+from Handlers.db_handler import (
+    read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, get_yesterday, get_yesterweek,
+    export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db, read_day_points_rating,
+    read_week_time_rating, read_week_points_rating)
+from Config.config_reader import admin, chat_id
 
-from Keyboards.keyboards import make_row_keyboard
+from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard
+# from Keyboards.inline_keyboard import get_inline_kb
 
 router: Router = Router()
 
-available_genders = ["Богатырь", "Царевна"]
+available_genders = ["Парень", "Девушка"]
 available_categories = ["1", "2", "3"]
+
+is_delete_mileage = False
 
 
 class Znakomstvo(StatesGroup):
     add_name = State()
     choosing_genders = State()
     choosing_categories = State()
+
+
+class Mileage_add_status(StatesGroup):
+    add_mileage_km = State()
+    add_mileage_time_hours = State()
+    add_mileage_time_minutes = State()
+    add_mileage_time_seconds = State()
+
 
 def convert_seconds(seconds):
     return str(datetime.timedelta(seconds=seconds))
@@ -32,12 +45,22 @@ def convert_seconds(seconds):
 @router.message(F.chat.type == "private", CommandStart())
 async def command_start_handler(message: Message, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
+    await message.answer(
+        text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
+        reply_markup=get_start_keyboard(),
+        # reply_markup=get_inline_kb()
+    )
+
+
+@router.message(F.text == "Регистрация")
+async def znakomstvo(message: Message, state: FSMContext) -> None:
+    # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
                              f"Давай познакомимся. Напишите свои имя и фамилию:")
         await state.set_state(Znakomstvo.add_name)
     else:
-        await message.answer(f"Мы уже познакомились")
+        await message.answer(f"Вы уже зарегистрировались", reply_markup=get_start_keyboard())
 
 
 @router.message(Znakomstvo.add_name)
@@ -54,8 +77,8 @@ async def name_added(message: Message, state: FSMContext):
 async def gender_chosen(message: Message, state: FSMContext):
     await state.update_data(chosen_gender=message.text.lower())
     await message.answer(
-        text="Спасибо. Теперь выберите вашу категорию бега:",
-        reply_markup=make_row_keyboard(available_categories, txt='Ваша категория бега:')
+        text="Спасибо. Теперь выберите ваш клуб:",
+        reply_markup=make_row_keyboard(available_categories, txt='Ваш клуб:')
     )
     await state.set_state(Znakomstvo.choosing_categories)
 
@@ -80,8 +103,9 @@ async def categories_chosen(message: Message, state: FSMContext):
     await message.answer(
         text=f"Вас зовут: {fullname}.\n"
              f"Вы: {gender}.\n"
-             f"Ваша категория: {category}",
-        reply_markup=ReplyKeyboardRemove()
+             f"Ваш клуб: {category}",
+        # reply_markup=ReplyKeyboardRemove()
+        reply_markup=get_start_keyboard()
     )
     await state.clear()
     add_new_user(telegram_id, username, fullname, gender, category)
@@ -90,93 +114,256 @@ async def categories_chosen(message: Message, state: FSMContext):
 @router.message(Znakomstvo.choosing_categories)
 async def category_incorrectly(message: Message):
     await message.answer(
-        text="У нас нет такой категории.\n"
+        text="У нас нет такого клуба.\n"
              "Пожалуйста, выберите один из вариантов:",
-        reply_markup=make_row_keyboard(available_categories, txt='Ваша категория бега:')
+        reply_markup=make_row_keyboard(available_categories, txt='Ваш клуб:')
     )
 
 
-# Обработчик команды добавления новой статистики /д
-@router.message(F.chat.type == "supergroup", Command("д"))
-async def cmd_add_statistics(message: Message, command: CommandObject):
-    telegram_id = message.from_user.id
-    # Обработка ошибок ввода пробега
-    try:
-        new_mileage = float(command.args.split()[0])
-        new_mileage_time = command.args.split()[1]
-        print(f'Время пробега: {new_mileage_time}')
-        # пробег и время число?
-    except ValueError:
-        await message.reply("Укажите пробег и время числом")
-        return
-    # пробег и время указаны после команды?
-    except TypeError:
-        await message.reply("Укажите пробег и время")
-        return
-    except AttributeError:
-        await message.reply("Укажите пробег и время")
-        return
-    except IndexError:
-        await message.reply("Укажите пробег и время")
-        return
-        # проверка на наличие пользователя в БД
+@router.message(F.text == "Добавление пробега")
+@router.message(F.text == "Удаление пробега")
+@router.message(F.chat.type == "private", Command("add"))
+async def command_add(message: Message, state: FSMContext) -> None:
+    # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
-        await message.reply(f"Для начала, познакомься с ботом: {botname}\n")
-        return
-    # нереальный дневной пробег
-    elif len(command.args.split()) > 2:
-        await message.reply("Слишком много аргументов")
-        return
-    elif len(new_mileage_time) != 8:
-        await message.reply("Неверный формат времени. Формат времени: ЧЧ:ММ:СС")
-        return
-    elif new_mileage == 0:
-        await message.reply("Пробег и время должны быть больше 0")
-        return
-    elif new_mileage > 300:
-        await message.reply("Обманщик!")
-        return
-
+        await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
+                             f"Для начала необходимо зарегистрироваться.\n",
+                             reply_markup=get_start_keyboard()
+                             )
+        # await state.set_state(Znakomstvo.add_name)
+        await state.clear()
     else:
-        # перевод времени в секунды
-        new_mileage_time_seconds = int(new_mileage_time[:2]) * 3600 + int(new_mileage_time[3:5]) * 60 + int(
-            new_mileage_time[6:])
-        print(f' Время пробега в секундах: {new_mileage_time_seconds}')
-        print(f'Темп: {(new_mileage_time_seconds / 60) / new_mileage}')
-        if ((new_mileage_time_seconds / 60) / new_mileage) < 2:
+        global is_delete_mileage
+        if message.text == "Удаление пробега":
+            is_delete_mileage = True
+        else:
+            is_delete_mileage = False
+        await message.answer(text="Введите пробег в км",
+                             reply_markup=get_cancel_keyboard(txt="Введите пробег в км"),
+                             )
+        await state.set_state(Mileage_add_status.add_mileage_km)
+        print(is_delete_mileage)
+
+
+# @router.message(F.text )
+@router.message(Mileage_add_status.add_mileage_km, F.text != "Отмена")
+async def mileage_km_added(message: Message, state: FSMContext):
+    try:
+        if float(message.text) == 0 or float(message.text) < 0:
+            await message.answer(text="Введи корректное расстояние",
+                                 reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
+            return
+        await state.update_data(mileage_km=float(message.text))
+        await message.answer(
+            text="Введите часы пробежки:",
+            reply_markup=get_cancel_keyboard(txt="Часы пробежки")
+        )
+        await state.set_state(Mileage_add_status.add_mileage_time_hours)
+    except ValueError:
+        await message.answer(text="Введите корректный пробег: км.км",
+                             reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
+
+
+@router.message(Mileage_add_status.add_mileage_time_hours, F.text != "Отмена")
+async def mileage_hour_added(message: Message, state: FSMContext):
+    try:
+        if int(message.text) > 24 or int(message.text) < 0:
+            await message.answer(text="Введи корректное время (от 0 до 24)",
+                                 reply_markup=get_cancel_keyboard(txt="Введите часы пробежки"))
+            return
+        await state.update_data(mileage_hour=int(message.text))
+        await message.answer(
+            text="Введите минуты пробежки:",
+            reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки")
+        )
+        await state.set_state(Mileage_add_status.add_mileage_time_minutes)
+    except ValueError:
+        await message.answer(text="Введи корректное время",
+                             reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки"))
+
+
+@router.message(Mileage_add_status.add_mileage_time_minutes, F.text != "Отмена")
+async def mileage_minutes_added(message: Message, state: FSMContext):
+    try:
+        if int(message.text) > 60:
+            await message.answer(text="Введи корректное время (от 0 до 60)",
+                                 reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки"))
+            return
+        await state.update_data(mileage_minutes=int(message.text))
+        await message.answer(
+            text="Введите секунды пробежки:",
+            reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки")
+        )
+        await state.set_state(Mileage_add_status.add_mileage_time_seconds)
+    except ValueError:
+        await message.answer(text="Введи корректное время",
+                             reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки"))
+
+
+# Ввод секунд пробежки, добавление пробежки в БД и ответ в личку и группу
+@router.message(Mileage_add_status.add_mileage_time_seconds, F.text != "Отмена")
+async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
+    try:
+        if int(message.text) > 60:
+            await message.answer(text="Введи корректное время (от 0 до 60)",
+                                 reply_markup=get_cancel_keyboard())
+            return
+        await state.update_data(mileage_seconds=int(message.text))
+        user_mileage_data = await state.get_data()
+        mileage_km = user_mileage_data['mileage_km']
+        mileage_hour = user_mileage_data['mileage_hour']
+        mileage_minutes = user_mileage_data['mileage_minutes']
+        mileage_seconds = user_mileage_data['mileage_seconds']
+        full_time_seconds = int(mileage_hour) * 3600 + int(mileage_minutes) * 60 + int(mileage_seconds)
+        if ((full_time_seconds / 60) / mileage_km) < 2:
             await message.reply(f"У нас новый мировой рекорд! Или нет?\n"
                                 f"Темп не может быть выше 2 мин./км.")
             return
-        new_mileage_points = update_today_data_db(telegram_id, new_mileage, new_mileage_time_seconds)
-        day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, new_mileage,
-                                                                        new_mileage_time_seconds, new_mileage_points)
-        day_mileage_time = convert_seconds(day_mileage_time_seconds)
+        telegram_id = message.from_user.id
 
-        await message.reply(
-            f"Новый пробег зафиксирован:\n"
-            f"{round(new_mileage, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
-            f"Итого за сегодня:\n"
-            f"{round(day_mileage, 2)} км. за {day_mileage_time}. Баллы: {round(day_mileage_points, 2)}"
-        )
+        global is_delete_mileage
 
+        # добавление пробега
+        if not is_delete_mileage:
+            new_mileage_points = update_today_data_db(telegram_id, mileage_km, full_time_seconds)
+            day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, mileage_km,
+                                                                                           full_time_seconds,
+                                                                                           new_mileage_points)
+            new_mileage_time = convert_seconds(full_time_seconds)
+            day_mileage_time = convert_seconds(day_mileage_time_seconds)
+            await bot.send_message(telegram_id,
+                                   f"Новый пробег зафиксирован:\n"
+                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
+                                   f"Итого за сегодня:\n"
+                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. Баллы: <b>{round(day_mileage_points, 2)}</b>",
+                                   reply_markup=get_start_keyboard()
+                                   )
+            await bot.send_message(
+                chat_id,
+                f"<b>{message.from_user.full_name}</b> добавил пробег:\n"
+                f"{round(mileage_km, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
+            )
+        # удаление пробега
+        else:
+            new_mileage_points = update_today_data_db(telegram_id, -mileage_km, -full_time_seconds)
+            day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, -mileage_km,
+                                                                                           -full_time_seconds,
+                                                                                           new_mileage_points)
+            new_mileage_time = convert_seconds(full_time_seconds)
+            day_mileage_time = convert_seconds(day_mileage_time_seconds)
+            await bot.send_message(telegram_id,
+                                   f"Удалён пробег:\n"
+                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
+                                   f"Итого за сегодня:\n"
+                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. Баллы: <b>{round(day_mileage_points, 2)}</b>",
+                                   reply_markup=get_start_keyboard()
+                                   )
+            await bot.send_message(
+                chat_id,
+                f"<b>{message.from_user.full_name}</b> удалил пробег:\n"
+                f"{round(mileage_km, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
+            )
+
+        await state.clear()
+    except ValueError:
+        await message.answer(text="Введи корректное время",
+                             reply_markup=get_cancel_keyboard())
+
+
+# обработка нажатия кнопки Отмена
+@router.message(F.chat.type == "private", F.text == "Отмена")
+async def cancel_button(message: Message, state: FSMContext):
+    await message.answer(
+        text=f"Добавление пробега отменено",
+        reply_markup=get_start_keyboard()
+        # reply_markup=ReplyKeyboardRemove()
+    )
+    await state.clear()
+
+
+# Обработчик команды добавления новой статистики /д
+# @router.message(F.chat.type == "private", Command("д"))
+# async def cmd_add_statistics(message: Message, bot: Bot, command: CommandObject):
+#     telegram_id = message.from_user.id
+#     # Обработка ошибок ввода пробега
+#     try:
+#         new_mileage = float(command.args.split()[0])
+#         new_mileage_time = command.args.split()[1]
+#         print(f'Время пробега: {new_mileage_time}')
+#         # пробег и время число?
+#     except ValueError:
+#         await message.reply("Укажите пробег и время числом")
+#         return
+#     # пробег и время указаны после команды?
+#     except TypeError:
+#         await message.reply("Укажите пробег и время")
+#         return
+#     except AttributeError:
+#         await message.reply("Укажите пробег и время")
+#         return
+#     except IndexError:
+#         await message.reply("Укажите пробег и время")
+#         return
+#         # проверка на наличие пользователя в БД
+#     if not read_user_statistics_from_db(message.from_user.id):
+#         await message.reply(f"Для начала, зарегистрируйся: {botname}\n")
+#         return
+#     # нереальный дневной пробег
+#     elif len(command.args.split()) > 2:
+#         await message.reply("Слишком много аргументов")
+#         return
+#     elif len(new_mileage_time) != 8:
+#         await message.reply("Неверный формат времени. Формат времени: ЧЧ:ММ:СС")
+#         return
+#     elif new_mileage == 0:
+#         await message.reply("Пробег и время должны быть больше 0")
+#         return
+#     elif new_mileage > 300:
+#         await message.reply("Обманщик!")
+#         return
+#
+#     else:
+#         # перевод времени в секунды
+#         new_mileage_time_seconds = int(new_mileage_time[:2]) * 3600 + int(new_mileage_time[3:5]) * 60 + int(
+#             new_mileage_time[6:])
+#         print(f'Время пробега в секундах: {new_mileage_time_seconds}')
+#         print(f'Темп: {(new_mileage_time_seconds / 60) / new_mileage}')
+#         if ((new_mileage_time_seconds / 60) / new_mileage) < 2:
+#             await message.reply(f"У нас новый мировой рекорд! Или нет?\n"
+#                                 f"Темп не может быть выше 2 мин./км.")
+#             return
+#         new_mileage_points = update_today_data_db(telegram_id, new_mileage, new_mileage_time_seconds)
+#         day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, new_mileage,
+#                                                                                        new_mileage_time_seconds,
+#                                                                                        new_mileage_points)
+#         day_mileage_time = convert_seconds(day_mileage_time_seconds)
+#
+#         await message.reply(
+#             f"Новый пробег зафиксирован:\n"
+#             f"{round(new_mileage, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
+#             f"Итого за сегодня:\n"
+#             f"{round(day_mileage, 2)} км. за {day_mileage_time}. Баллы: {round(day_mileage_points, 2)}"
+#         )
+#         await bot.send_message(
+#             chat_id,
+#             f"{message.from_user.full_name} добавил пробег:\n"
+#             f"{round(new_mileage, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}")
 
 
 # обработчика команды /помощь
-@router.message(F.chat.type == "supergroup", Command("помощь"))
-async def cmd_help(message: Message):
-    await message.reply(
-        f"Для участия в челендже, зарегистрируйся: {botname}\n"
-        f"Добавление пробега:\n"
-        f"/д км.км мин\n"
-        f"Уменьшение пробега:\n"
-        f"/д -км.км -мин\n"
-        f"Личная статистика:\n"
-        f"/statistics"
-    )
+@router.message(F.text == "Дополнительная информация")
+@router.message(F.chat.type == "private", Command("help"))
+async def cmd_help(message: Message, bot: Bot):
+    await bot.send_message(message.from_user.id,
+                           f"предложения и пожелания:\n"
+                           f"@AVSolovyov",
+                           reply_markup=get_start_keyboard()
+                           )
 
 
 # обработчика команды /стат
-@router.message(Command("statistics"))
+@router.message(F.text == "Личная статистика")
+@router.message(F.chat.type == "private", Command("statistics"))
 async def cmd_user_statistics(message: Message, bot: Bot):
     telegram_id = message.from_user.id
     user_statistics = read_user_statistics_from_db(telegram_id)
@@ -202,25 +389,18 @@ async def cmd_user_statistics(message: Message, bot: Bot):
             f"Месячный пробег: <b>{round(month_mileage, 2)}</b> км. за <b>{month_mileage_time}</b>, "
             f"<b>{round(month_mileage_points, 2)}</b> баллов\n"
             f"Общий пробег: <b>{round(total_mileage, 2)}</b> км. за <b>{total_mileage_time}</b>, "
-            f"<b>{round(total_mileage_points, 2)}</b> баллов"
+            f"<b>{round(total_mileage_points, 2)}</b> баллов",
+            reply_markup=get_start_keyboard()
         )
     else:
         await bot.send_message(
             telegram_id,
-            f"Сначала добавь пробег"
+            f"Для начала необходимо зарегистрироваться.",
+            reply_markup=get_start_keyboard()
         )
 
 
-@router.message(Command("support"))
-async def get_support(message: Message, bot: Bot):
-    await bot.send_message(
-        message.from_user.id,
-        f"Напишите нам: @AVSolovyov"
-    )
-
-
 # отправка дневного рейтинга в общий чат
-
 async def show_day_mileage_rating(bot: Bot):
     try:
         day_rating = read_day_rating()
@@ -386,6 +566,7 @@ async def show_week_time_rating(bot: Bot):
         f"{text_answer}"
     )
 
+
 async def show_week_points_rating(bot: Bot):
     try:
         week_rating = read_week_points_rating()
@@ -434,6 +615,7 @@ async def cmd_day_rating(message: Message, bot: Bot):
         await show_day_time_rating(bot)
         await show_day_points_rating(bot)
 
+
 # Отправка недельного рейтинга ботом
 async def show_week_rating(bot: Bot):
     await show_week_mileage_rating(bot)
@@ -458,25 +640,26 @@ async def cmd_export_data_to_file(message: types.Document, bot: Bot):
         file_to_send = FSInputFile(filename)
 
         if os.path.exists(filename):
-            print("Отправка файла пользователю")
-            await bot.send_document(message.from_user.id, file_to_send)
+            await bot.send_document(message.from_user.id, file_to_send, reply_markup=get_start_keyboard())
             os.remove(filename)
-            print("Файл отправлен")
-            print("Файл удалён")
         else:
-            await bot.send_message(message.from_user.id, "Файл не найден. Проверьте путь к файлу.")
+            await bot.send_message(message.from_user.id, "Файл не найден. Проверьте путь к файлу.",
+                                   reply_markup=get_start_keyboard())
     else:
-        await message.answer(f"Эта команда для админа!")
+        await message.answer(f"Эта команда для админа!", reply_markup=get_start_keyboard())
 
 
 @router.message(F.new_chat_members)
 async def chat_new_user_added(message: Message):
+    bot_button = InlineKeyboardButton(text="Регистрация в челлендже", url="https://t.me/SportStatistics_bot")
+    row = [bot_button]
+    rows = [row]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     for user in message.new_chat_members:
         content = Text(
-            "Привет, ", Bold(user.full_name), ".\n"
-            "Для участия в челендже, зарегистрируйся: https://t.me/SportStatistics_bot\n"
-            "Справка по боту: /помощь"
+            "Привет, ", Bold(user.full_name), "! Для участия в челлендже, зарегистрируйся"
         )
         await message.reply(
-            **content.as_kwargs()
+            **content.as_kwargs(),
+            reply_markup=markup,
         )
