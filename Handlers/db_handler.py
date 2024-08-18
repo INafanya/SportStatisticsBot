@@ -317,6 +317,9 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
         week_mileage_time -= day_mileage_time
         month_mileage_time -= day_mileage_time
         total_mileage_time -= day_mileage_time
+        week_mileage_points -= day_mileage_points
+        month_mileage_points -= day_mileage_points
+        total_mileage_points -= day_mileage_points
         day_mileage = 0
         day_mileage_time = 0
         day_mileage_points = 0
