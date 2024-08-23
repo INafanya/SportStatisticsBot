@@ -1,80 +1,114 @@
 import sqlite3
 from datetime import datetime, timedelta
+from time import strftime
 
+import aiosqlite as aiosqlite
 
 def get_yesterday():
     date_format = '%d.%m.%Y'
-    today = datetime.now()
-    yesterday = today - timedelta(days=1)
+    yesterday = datetime.now() - timedelta(days=1)
     yesterday_format = yesterday.strftime(date_format)
     return yesterday_format
 
-
+def get_today():
+    date_format = '%d.%m.%Y'
+    today = datetime.now()
+    today_format = today.strftime(date_format)
+    return today_format
 def read_day_rating():
-    try:
-        conn = sqlite3.connect('mileage.db')
-        cursor = conn.cursor()
-        print("Подключение к SQLite успешно")
-        yesterday = get_yesterday()
-        cursor.execute('''
-                    SELECT 
-                    COUNT(telegram_id)
-                    FROM day_mileage
-                    WHERE date = ?
-                    ''', (yesterday,), )
+    '''
+    1. Считать из БД кол-во человек в клубе
+    2. Взять кол-во участников в минимальном клубе(минимум 1)
+    3.
+    :return:
+    '''
+    conn = sqlite3.connect('mileage.db')
+    cursor = conn.cursor()
+    today = get_today()
+    # получение кол-ва парней в минимальном клубе
+    cursor.execute('''
+                                SELECT
+                                count(telegram_id), category
+                                FROM users_mileage
+                                WHERE gender = 'парень'
+                                GROUP BY category
+                                ORDER BY count(telegram_id)
+                                ''', )
+    min_club_count_man = cursor.fetchone()[0]
+    if not min_club_count_man:
+        min_club_count_man = 1
+    print(f"Минимальное кол-во парней: {min_club_count_man}")
+    # получение кол-ва девушек в минимальном клубе
+    cursor.execute('''
+                                        SELECT
+                                        count(telegram_id), category
+                                        FROM users_mileage
+                                        WHERE gender = 'девушка'
+                                        GROUP BY category
+                                        ORDER BY count(telegram_id)
+                                        ''', )
+    min_club_count_woman = cursor.fetchone()[0]
+    if not min_club_count_woman:
+        min_club_count_woman = 1
+    print(f"Минимальное кол-во девушек: {min_club_count_woman}")
 
-        users_sum = cursor.fetchall()
+    # сумма пробега у n лучших парней клуба
+    cursor.execute('''
+                        SELECT category,
+                                date,
+                                gender,
+                                sum(mileage) mileage,
+                                %s as active_users 
+                        FROM day_mileage a 
+                        WHERE a.id IN (
+                                      SELECT id FROM day_mileage b 
+                                      WHERE b.category = a.category
+                                      AND b.gender = 'парень' 
+                                      AND b.date = '%s'
+                                      ORDER BY b.category, b.mileage DESC 
+                                      LIMIT %s)
+                        GROUP BY category
+                        ORDER BY sum(mileage) DESC
+                                ''' % (min_club_count_man, today, min_club_count_man), )
+    club_mileage_man = cursor.fetchall()
+    print(f"Суммарный пробег парней: {club_mileage_man}")
+    # сумма пробега у n лучших девушек клуба
+    cursor.execute('''
+                            SELECT category,
+                                    date,
+                                    gender,
+                                    sum(mileage) mileage,
+                                    %s as active_users 
+                            FROM day_mileage a 
+                            WHERE a.id IN (
+                                          SELECT id FROM day_mileage b 
+                                          WHERE b.category = a.category
+                                          AND b.gender = 'девушка' 
+                                          AND b.date = '%s'
+                                          ORDER BY b.category, b.mileage DESC 
+                                          LIMIT %s)
+                            GROUP BY category
+                            ORDER BY sum(mileage) DESC
+                                    ''' % (min_club_count_woman, today, min_club_count_woman), )
+    club_mileage_woman = cursor.fetchall()
+    print(f"Суммарный пробег девушек: {club_mileage_woman}")
 
-        if users_sum[0][0] <= 8:
-            cursor.execute('''
-                            SELECT 
-                            telegram_id,
-                            username,
-                            day_mileage
-                            FROM day_mileage
-                            WHERE date = ?
-                            ORDER BY day_mileage DESC
-                            ''', (yesterday,), )
+    sql_query = '''INSERT INTO day_club_mileage (category, date, gender, mileage, active_users)
+                                            VALUES (?, ?, ?, ?, ?)'''
+    cursor.executemany(sql_query, club_mileage_man)
+    conn.commit()
+    cursor.executemany(sql_query, club_mileage_woman)
+    conn.commit()
+    # суммируем с предыдущими пробегами
+    if conn:
+        conn.close()
+        return club_mileage_man, club_mileage_woman
 
-            result = [cursor.fetchall()]
+        # async def select_all(par, part):
+        #     async with aiosqlite.connect('db') as conn:
+        #         cursor = await conn.execute("SELECT * FROM table WHERE a=b LIMIT %s OFFSET %s" % (par, part)
+        #         row = await cursor.fetchall()
+        #         return row
 
-        else:
-            cursor.execute('''
-                SELECT 
-                telegram_id,
-                username,
-                day_mileage
-                FROM day_mileage
-                WHERE date = ?
-                ORDER BY day_mileage DESC
-                LIMIT 5
-                ''', (yesterday,), )
+read_day_rating()
 
-            winners = cursor.fetchall()
-
-            cursor.execute('''
-                        SELECT 
-                        telegram_id,
-                        username,
-                        day_mileage
-                        FROM day_mileage
-                        WHERE day_mileage > 0 AND date = ?
-                        ORDER BY day_mileage ASC
-                        LIMIT 3
-                        ''', (yesterday,), )
-            loosers = cursor.fetchall()
-
-            # result = winners + loosers[::-1] + users_sum
-            result = [winners, loosers[::-1], users_sum]
-            # cursor.close()
-
-    except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite", error)
-
-    finally:
-        if conn:
-            conn.close()
-            print("Соединение с SQLite закрыто")
-        return result
-
-print(read_day_rating())

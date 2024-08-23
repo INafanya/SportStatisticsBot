@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from Handlers.db_handler import create_sql_db
+from Handlers.db_handler import create_sql_db, copy_day_club_mileage
 from Handlers.db_handler import copy_and_clear_day_mileage, copy_and_clear_week_mileage
 from Config.config_reader import config
 from aiogram import Bot, Dispatcher
@@ -9,7 +9,7 @@ from Handlers import other_handlers
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from Handlers.other_handlers import show_day_rating, show_week_rating, show_day_time_rating
+from Handlers.other_handlers import show_day_rating, show_week_rating, show_club_mileage_rating
 
 # Инициализация логирования
 logger = logging.getLogger(__name__)
@@ -38,26 +38,32 @@ async def main() -> None:
     # Регистрируем обработчики(handlers)
     dp.include_router(other_handlers.router)
 
-    if __name__ == '__main__':
-        # Инициализируем планировщик
-        scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-        # суточный таймер. Обнуляет дневной пробег каждый день в 23:55
-        scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
-        scheduler.add_job(show_day_rating, 'cron', hour=8, minute=0, args=(bot,))
+    #if __name__ == '__main__':
+    # Инициализируем планировщик
+    scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    # суточный таймер. Обнуляет дневной пробег каждый день в 23:55
+    scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
+    # суточный таймер. копирует суммарный пробег по клубам в БД
+    scheduler.add_job(copy_day_club_mileage, 'cron', hour=23, minute=57)
+    # суточный таймер. выводит вчерашний рейтинг
+    scheduler.add_job(show_day_rating, 'cron', hour=8, minute=1, args=(bot,))
+    # суточный таймер. выводит вчерашний рейтинг по клубам
+    scheduler.add_job(show_club_mileage_rating, 'cron', hour=8, minute=0, args=(bot,))
 
-        # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
-        scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
-        scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=1, args=(bot,))
+    # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
+    scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
+    # суточный таймер. выводит рейтинг за прошедшую неделю
+    scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=2, args=(bot,))
 
-        # 4-х недельный таймер. Обнуляет и копирует пробег в каждое 4-е воскресенье в 23:58
-        #scheduler.add_job(copy_and_clear_month_mileage, 'cron', day='last sun', hour=23, minute=58)
+    # 4-х недельный таймер. Обнуляет и копирует пробег в каждое 4-е воскресенье в 23:58
+    #scheduler.add_job(copy_and_clear_month_mileage, 'cron', day='last sun', hour=23, minute=58)
 
-        #scheduler.add_job(show_month_mileage, 'cron', day='first mon', hour=8, minute=2)
+    #scheduler.add_job(show_month_mileage, 'cron', day='first mon', hour=8, minute=2)
 
-        # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
-        #scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
+    # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
+    #scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
 
-        scheduler.start()
+    scheduler.start()
     # проверяем на наличие БД
     logger.info("Проверка наличия БД")
     create_sql_db()

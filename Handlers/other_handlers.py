@@ -11,7 +11,7 @@ from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import (
     read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, get_yesterday, get_yesterweek,
     export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db, read_day_points_rating,
-    read_week_time_rating, read_week_points_rating)
+    read_week_time_rating, read_week_points_rating, read_club_rating)
 from Config.config_reader import admin, chat_id
 
 from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard
@@ -20,8 +20,8 @@ from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cance
 router: Router = Router()
 
 available_genders = ["Парень", "Девушка"]
-available_categories = ["1", "2", "3"]
-#available_categories = ["Begym", "Совкомбанк", "Beerun", "ДомРФ", "КРОК"]
+#available_categories = ["1", "2", "3"]
+available_categories = ["Begym", "Совкомбанк", "Beerun", "ДомРФ", "КРОК"]
 
 is_delete_mileage = False
 
@@ -106,11 +106,10 @@ async def categories_chosen(message: Message, state: FSMContext):
         text=f"Вас зовут: {fullname}.\n"
              f"Вы: {gender}.\n"
              f"Ваш клуб: {category}",
-        # reply_markup=ReplyKeyboardRemove()
         reply_markup=get_start_keyboard()
     )
     await state.clear()
-    add_new_user(telegram_id, username, fullname, gender, category)
+    await add_new_user(telegram_id, username, fullname, gender, category)
 
 
 @router.message(Znakomstvo.choosing_categories)
@@ -439,7 +438,45 @@ async def cmd_user_statistics(message: Message, bot: Bot):
             reply_markup=get_start_keyboard()
         )
 
+async def show_club_mileage_rating(bot: Bot):
+    '''
+    Функция выводит накопительный рейтинг клуба за все предыдущие дни.
+    Рейтинг делится на М и Ж.
+    Суммируется максимальный пробег у всех человек в клубе.
+    Кол-во человек в клубе ограничивается минимальный кол-м в любом клубе.
+    :param bot:
+    :return:
+    '''
+    try:
+        man_rating, woman_rating = read_club_rating()
+        yesterday = get_yesterday()
+        rating_man = ""
+        for (index, i) in enumerate(man_rating):
+            float_club_rating = round(float(str(man_rating[index][1]).replace(',', '.')), 2)
+            rating_man += f"{index + 1}. {man_rating[index][0]} - {float_club_rating} км.\n"
+        text_answer_man = f"{rating_man}"
 
+        rating_woman = ""
+        for (index, i) in enumerate(woman_rating):
+            float_club_rating = round(float(str(woman_rating[index][1]).replace(',', '.')), 2)
+            rating_woman += f"{index + 1}. {woman_rating[index][0]} - {float_club_rating} км.\n"
+        text_answer_woman = f"{rating_woman}"
+    except IndexError:
+        await bot.send_message(chat_id, f'Нет пробега за {yesterday}')
+    await bot.send_message(
+        chat_id,
+        f"#Итог_на {yesterday}\n"
+        f"#Рейтинг_парни:"
+        f"\n"
+        f"{text_answer_man}"
+    )
+    await bot.send_message(
+        chat_id,
+        f"#Итог_на {yesterday}\n"
+        f"#Рейтинг_девушки:"
+        f"\n"
+        f"{text_answer_woman}"
+    )
 # отправка дневного рейтинга в общий чат
 async def show_day_mileage_rating(bot: Bot):
     try:
@@ -449,26 +486,21 @@ async def show_day_mileage_rating(bot: Bot):
         loosers = ""
         delimiter = ""
         yesterday = get_yesterday()
-
         for (index, i) in enumerate(day_rating):
-            float_day_rating = round(float(str(day_rating[index][2]).replace(',', '.')), 2)
+            float_day_rating = round(float(str(day_rating[index][3]).replace(',', '.')), 2)
             summ_mileage += float_day_rating
             if index <= 4:
-                winners += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
+                winners += f"{index + 1}. {day_rating[index][2]}. {day_rating[index][1]} - {float_day_rating} км.\n"
             elif index >= len(day_rating) - 3:
                 delimiter = f"...\n"
-                loosers += f"{index + 1}. {day_rating[index][1]} - {float_day_rating} км.\n"
-
-        text_answer = f"{winners}" \
-                      f"{delimiter}" \
-                      f"{loosers}"
+                loosers += f"{index + 1}. {day_rating[index][2]}. {day_rating[index][1]} - {float_day_rating} км.\n"
+        text_answer = f"{winners}{delimiter}{loosers}"
     except IndexError:
         text_answer = f'Нет пробега за {yesterday}'
-
     await bot.send_message(
         chat_id,
         f"#Итог_дня {yesterday}\n"
-        f"#Командный_пробег: {round(summ_mileage, 2)}км.\n"
+        f"#Общий_пробег: {round(summ_mileage, 2)}км.\n"
         f"\n"
         f"{text_answer}"
     )
@@ -552,13 +584,13 @@ async def show_week_mileage_rating(bot: Bot):
         user_sum = len(week_rating)
 
         for (index, i) in enumerate(week_rating):
-            float_week_rating = round(float(str(week_rating[index][2]).replace(',', '.')), 2)
+            float_week_rating = round(float(str(week_rating[index][3]).replace(',', '.')), 2)
             summ_mileage += float_week_rating
             if index <= 4:
-                winners += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
+                winners += f"{index + 1}.{week_rating[index][2]}. {week_rating[index][1]} - {float_week_rating} км.\n"
             elif index >= user_sum - 3:
                 delimiter = f"...\n"
-                loosers += f"{index + 1}. {week_rating[index][1]} - {float_week_rating} км.\n"
+                loosers += f"{index + 1}.{week_rating[index][2]}. {week_rating[index][1]} - {float_week_rating} км.\n"
         text_answer = f"{winners}" \
                       f"{delimiter}" \
                       f"{loosers}"
@@ -643,8 +675,8 @@ async def show_week_points_rating(bot: Bot):
 # Отправка дневного рейтинга ботом
 async def show_day_rating(bot: Bot):
     await show_day_mileage_rating(bot)
-    await show_day_time_rating(bot)
-    await show_day_points_rating(bot)
+    # await show_day_time_rating(bot)
+    # await show_day_points_rating(bot)
 
 
 # Отправка дневного рейтинга по команде /day
@@ -652,15 +684,16 @@ async def show_day_rating(bot: Bot):
 async def cmd_day_rating(message: Message, bot: Bot):
     if message.from_user.id in admin:
         await show_day_mileage_rating(bot)
-        await show_day_time_rating(bot)
-        await show_day_points_rating(bot)
+        await show_club_mileage_rating(bot)
+        # await show_day_time_rating(bot)
+        # await show_day_points_rating(bot)
 
 
 # Отправка недельного рейтинга ботом
 async def show_week_rating(bot: Bot):
     await show_week_mileage_rating(bot)
-    await show_week_time_rating(bot)
-    await show_week_points_rating(bot)
+    # await show_week_time_rating(bot)
+    # await show_week_points_rating(bot)
 
 
 # Отправка дневного рейтинга по команде /week
@@ -668,8 +701,8 @@ async def show_week_rating(bot: Bot):
 async def cmd_week_rating(message: Message, bot: Bot):
     if message.from_user.id in admin:
         await show_week_mileage_rating(bot)
-        await show_week_time_rating(bot)
-        await show_week_points_rating(bot)
+        # await show_week_time_rating(bot)
+        # await show_week_points_rating(bot)
 
 
 @router.message(F.chat.type == "private", Command("файл"))

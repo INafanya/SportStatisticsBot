@@ -47,7 +47,7 @@ def get_cancel_keyboard(txt=''):
     markup = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Отмена")]],
         resize_keyboard=True,
-        #one_time_keyboard=True,
+        # one_time_keyboard=True,
         input_field_placeholder=txt
     )
     return markup
