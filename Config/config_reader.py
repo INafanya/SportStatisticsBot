@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 config = Settings()
 
 admin = (1060800091, 741201603)
-chat_id = -1002225315251
+chat_id = -4534327740
 botname = 'https://t.me/SportStatistics_bot'
 #chat_id = -1002079889214
 #chat_id = -1002086508659
