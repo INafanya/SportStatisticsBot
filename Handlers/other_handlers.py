@@ -20,7 +20,6 @@ from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cance
 router: Router = Router()
 
 available_genders = ["Парень", "Девушка"]
-#available_categories = ["1", "2", "3"]
 available_categories = ["Begym", "Совкомбанк", "Beerun", "ДомРФ", "КРОК"]
 
 is_delete_mileage = False
@@ -45,8 +44,7 @@ def convert_seconds(seconds):
 
 # Обработчик сообщения команды /start
 @router.message(CommandStart())
-async def command_start_handler(message: Message, bot: Bot, state: FSMContext) -> None:
-    # проверка на наличия в БД данных о пользователе
+async def command_start_handler(message: Message, bot: Bot) -> None:
     await bot.send_message(chat_id=message.from_user.id,
         text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
         reply_markup=get_start_keyboard(),
@@ -59,7 +57,7 @@ async def znakomstvo(message: Message, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
-                             f"Давай познакомимся. Напишите свои имя и фамилию:")
+                             f"Напишите свои имя и фамилию:")
         await state.set_state(Znakomstvo.add_name)
     else:
         await message.answer(f"Вы уже зарегистрировались", reply_markup=get_start_keyboard())
@@ -88,7 +86,7 @@ async def gender_chosen(message: Message, state: FSMContext):
 @router.message(Znakomstvo.choosing_genders)
 async def gender_incorrectly(message: Message):
     await message.answer(
-        text="Я не знаю такого пола.\n\n"
+        text="Я не знаю такого пола.\n"
              "Пожалуйста, выберите один из вариантов:",
         reply_markup=make_row_keyboard(available_genders, txt='Вы:')
     )
@@ -103,7 +101,8 @@ async def categories_chosen(message: Message, state: FSMContext):
     gender = user_data['chosen_gender']
     category = message.text.lower()
     await message.answer(
-        text=f"Вас зовут: {fullname}.\n"
+        text=f"Спасибо за регистрацию!\n"
+             f"Вас зовут: {fullname}.\n"
              f"Вы: {gender}.\n"
              f"Ваш клуб: {category}",
         reply_markup=get_start_keyboard()
@@ -145,7 +144,7 @@ async def command_add(message: Message, state: FSMContext) -> None:
 
 
 
-# @router.message(F.text )
+
 @router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "Отмена")
 async def mileage_km_added(message: Message, state: FSMContext):
     try:
@@ -228,9 +227,11 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
             day_mileage_time = convert_seconds(day_mileage_time_seconds)
             await bot.send_message(telegram_id,
                                    f"Новый пробег зафиксирован:\n"
-                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
+                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. "
+                                   f"Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
                                    f"Итого за сегодня:\n"
-                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. Баллы: <b>{round(day_mileage_points, 2)}</b>",
+                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. "
+                                   f"Баллы: <b>{round(day_mileage_points, 2)}</b>",
                                    reply_markup=get_start_keyboard()
                                    )
             await state.clear()
@@ -249,9 +250,11 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
             day_mileage_time = convert_seconds(day_mileage_time_seconds)
             await bot.send_message(telegram_id,
                                    f"Удалён пробег:\n"
-                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
+                                   f"<b>{round(mileage_km, 2)}</b> км. за <b>{new_mileage_time}</b>. "
+                                   f"Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
                                    f"Итого за сегодня:\n"
-                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. Баллы: <b>{round(day_mileage_points, 2)}</b>",
+                                   f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. "
+                                   f"Баллы: <b>{round(day_mileage_points, 2)}</b>",
                                    reply_markup=get_start_keyboard()
                                    )
             await bot.send_message(
