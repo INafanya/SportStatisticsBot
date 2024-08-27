@@ -639,7 +639,7 @@ async def show_day_rating(bot: Bot):
 
 
 # Отправка дневного рейтинга по команде /day
-@router.message(F.chat.type == "supergroup", Command("day"))
+@router.message(F.chat.type == "private", Command("day"))
 async def cmd_day_rating(message: Message, bot: Bot):
     if message.from_user.id in admin:
         await show_day_mileage_rating(bot)
