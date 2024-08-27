@@ -44,17 +44,17 @@ def convert_seconds(seconds):
 
 
 # Обработчик сообщения команды /start
-@router.message(F.chat.type == "private", CommandStart())
-async def command_start_handler(message: Message, state: FSMContext) -> None:
+@router.message(CommandStart())
+async def command_start_handler(message: Message, bot: Bot, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
-    await message.answer(
+    await bot.send_message(chat_id=message.from_user.id,
         text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
         reply_markup=get_start_keyboard(),
         # reply_markup=get_inline_kb()
     )
 
 
-@router.message(F.text == "Регистрация")
+@router.message(F.chat.type == "private", F.text == "Регистрация")
 async def znakomstvo(message: Message, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
@@ -109,7 +109,7 @@ async def categories_chosen(message: Message, state: FSMContext):
         reply_markup=get_start_keyboard()
     )
     await state.clear()
-    await add_new_user(telegram_id, username, fullname, gender, category)
+    add_new_user(telegram_id, username, fullname, gender, category)
 
 
 @router.message(Znakomstvo.choosing_categories)
@@ -142,22 +142,11 @@ async def command_add(message: Message, state: FSMContext) -> None:
                              reply_markup=get_cancel_keyboard(txt="Введите пробег в км"),
                              )
         await state.set_state(Mileage_add_status.add_mileage_km)
-        # таймер ожидания ввода
-        timer_id = "add_mileage_km"
-        await state.update_data(timer_id=timer_id)
-        await asyncio.sleep(30)
-        data = await state.get_data()
-        actual_timer_id = data.get("timer_id")
-        if await state.get_state() == 'Mileage_add_status:add_mileage_km' and actual_timer_id == timer_id:
-            await message.answer(
-                text=f"Превышено время ожидания ввода данных",
-                reply_markup=get_start_keyboard()
-            )
-            await state.clear()
+
 
 
 # @router.message(F.text )
-@router.message(Mileage_add_status.add_mileage_km, F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "Отмена")
 async def mileage_km_added(message: Message, state: FSMContext):
     try:
         if float(message.text) == 0 or float(message.text) < 0:
@@ -168,24 +157,13 @@ async def mileage_km_added(message: Message, state: FSMContext):
             reply_markup=get_cancel_keyboard(txt="Часы пробежки")
         )
         await state.set_state(Mileage_add_status.add_mileage_time_hours)
-        # таймер ожидания ввода
-        timer_id = "add_mileage_time_hours"
-        await state.update_data(timer_id=timer_id)
-        await asyncio.sleep(30)
-        data = await state.get_data()
-        actual_timer_id = data.get("timer_id")
-        if await state.get_state() == 'Mileage_add_status:add_mileage_time_hours' and actual_timer_id == timer_id:
-            await message.answer(
-                text=f"Превышено время ожидания ввода данных",
-                reply_markup=get_start_keyboard()
-            )
-            await state.clear()
+
     except ValueError:
         await message.answer(text="Введите корректный пробег: км.км",
                              reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_hours, F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_hours, F.chat.type == "private", F.text != "Отмена")
 async def mileage_hour_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 24 or int(message.text) < 0:
@@ -196,24 +174,13 @@ async def mileage_hour_added(message: Message, state: FSMContext):
             reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки")
         )
         await state.set_state(Mileage_add_status.add_mileage_time_minutes)
-        # таймер ожидания ввода
-        timer_id = "add_mileage_time_minutes"
-        await state.update_data(timer_id=timer_id)
-        await asyncio.sleep(30)
-        data = await state.get_data()
-        actual_timer_id = data.get("timer_id")
-        if await state.get_state() == 'Mileage_add_status:add_mileage_time_minutes' and actual_timer_id == timer_id:
-            await message.answer(
-                text=f"Превышено время ожидания ввода данных",
-                reply_markup=get_start_keyboard()
-            )
-            await state.clear()
+
     except ValueError:
         await message.answer(text="Введи корректное время",
                              reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_minutes, F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_minutes, F.chat.type == "private", F.text != "Отмена")
 async def mileage_minutes_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 60:
@@ -224,25 +191,14 @@ async def mileage_minutes_added(message: Message, state: FSMContext):
             reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки")
         )
         await state.set_state(Mileage_add_status.add_mileage_time_seconds)
-        # таймер ожидания ввода
-        timer_id = "add_mileage_time_seconds"
-        await state.update_data(timer_id=timer_id)
-        await asyncio.sleep(30)
-        data = await state.get_data()
-        actual_timer_id = data.get("timer_id")
-        if await state.get_state() == 'Mileage_add_status:add_mileage_time_seconds' and actual_timer_id == timer_id:
-            await message.answer(
-                text=f"Превышено время ожидания ввода данных",
-                reply_markup=get_start_keyboard()
-            )
-            await state.clear()
+
     except ValueError:
         await message.answer(text="Введи корректное время",
                              reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки"))
 
 
 # Ввод секунд пробежки, добавление пробежки в БД и ответ в личку и группу
-@router.message(Mileage_add_status.add_mileage_time_seconds, F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_seconds, F.chat.type == "private", F.text != "Отмена")
 async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
     try:
         if int(message.text) > 60:
@@ -277,6 +233,7 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
                                    f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. Баллы: <b>{round(day_mileage_points, 2)}</b>",
                                    reply_markup=get_start_keyboard()
                                    )
+            await state.clear()
             await bot.send_message(
                 chat_id,
                 f"<b>{message.from_user.full_name}</b> добавил пробег:\n"
@@ -303,7 +260,6 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
                 f"{round(mileage_km, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
             )
 
-        await state.clear()
     except ValueError:
         await message.answer(text="Введи корректное время",
                              reply_markup=get_cancel_keyboard())
