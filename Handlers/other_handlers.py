@@ -93,7 +93,7 @@ async def gender_incorrectly(message: Message):
 
 
 @router.message(Znakomstvo.choosing_categories, F.text.in_(available_categories))
-async def categories_chosen(message: Message, state: FSMContext):
+async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     user_data = await state.get_data()
     telegram_id = message.from_user.id
     username = message.from_user.full_name
@@ -109,6 +109,12 @@ async def categories_chosen(message: Message, state: FSMContext):
     )
     await state.clear()
     add_new_user(telegram_id, username, fullname, gender, category)
+    await bot.send_message(
+        chat_id,
+        f"У нас новый участник!\n"
+        f"<b>{fullname}</b> из клуба {category}\n"
+        f"Желаем успехов в челлендже!"
+    )
 
 
 @router.message(Znakomstvo.choosing_categories)
