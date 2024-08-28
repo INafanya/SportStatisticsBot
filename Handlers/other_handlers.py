@@ -257,6 +257,7 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
                                    f"Баллы: <b>{round(day_mileage_points, 2)}</b>",
                                    reply_markup=get_start_keyboard()
                                    )
+            await state.clear()
             await bot.send_message(
                 chat_id,
                 f"<b>{message.from_user.full_name}</b> удалил пробег:\n"
@@ -656,7 +657,7 @@ async def show_week_rating(bot: Bot):
 
 
 # Отправка дневного рейтинга по команде /week
-@router.message(F.chat.type == "supergroup", Command("week"))
+@router.message(F.chat.type == "private", Command("week"))
 async def cmd_week_rating(message: Message, bot: Bot):
     if message.from_user.id in admin:
         await show_week_mileage_rating(bot)
