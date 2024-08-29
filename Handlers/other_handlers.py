@@ -1,12 +1,10 @@
-import asyncio
 import os
 import datetime
 from aiogram import Router, F, Bot, types
-from aiogram.filters import CommandStart, Command, CommandObject
+from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import (Message, FSInputFile, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton,
-                           CallbackQuery)
+from aiogram.types import (Message, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton)
 from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import (
     read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, get_yesterday, get_yesterweek,
@@ -14,7 +12,8 @@ from Handlers.db_handler import (
     read_week_time_rating, read_week_points_rating, read_club_rating)
 from Config.config_reader import admin, chat_id
 
-from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard
+from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard, get_donate_button
+
 # from Keyboards.inline_keyboard import get_inline_kb
 
 router: Router = Router()
@@ -46,10 +45,10 @@ def convert_seconds(seconds):
 @router.message(CommandStart())
 async def command_start_handler(message: Message, bot: Bot) -> None:
     await bot.send_message(chat_id=message.from_user.id,
-        text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
-        reply_markup=get_start_keyboard(),
-        # reply_markup=get_inline_kb()
-    )
+                           text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
+                           reply_markup=get_start_keyboard(),
+                           # reply_markup=get_inline_kb()
+                           )
 
 
 @router.message(F.chat.type == "private", F.text == "Регистрация")
@@ -147,8 +146,6 @@ async def command_add(message: Message, state: FSMContext) -> None:
                              reply_markup=get_cancel_keyboard(txt="Введите пробег в км"),
                              )
         await state.set_state(Mileage_add_status.add_mileage_km)
-
-
 
 
 @router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "Отмена")
@@ -359,10 +356,15 @@ async def cancel_button(message: Message, state: FSMContext):
 @router.message(F.text == "Дополнительная информация")
 @router.message(F.chat.type == "private", Command("help"))
 async def cmd_help(message: Message, bot: Bot):
+    donate_button = InlineKeyboardButton(text="Поддержать проект", url="https://pay.cloudtips.ru/p/cbd68797")
+    message_button = InlineKeyboardButton(text="Обратная связь", url="https://t.me/AVSolovyov")
+    row = [donate_button]
+    rows = [[donate_button], [message_button]]
+    markup = InlineKeyboardMarkup(inline_keyboard=rows)
     await bot.send_message(message.from_user.id,
-                           f"предложения и пожелания:\n"
-                           f"@AVSolovyov",
-                           reply_markup=get_start_keyboard()
+                           f"Понравился бот? Поддержите нас",
+                           reply_markup=markup
+                           # reply_markup=get_donate_button()
                            )
 
 
@@ -404,6 +406,7 @@ async def cmd_user_statistics(message: Message, bot: Bot):
             reply_markup=get_start_keyboard()
         )
 
+
 async def show_club_mileage_rating(bot: Bot):
     '''
     Функция выводит накопительный рейтинг клуба за все предыдущие дни.
@@ -443,6 +446,8 @@ async def show_club_mileage_rating(bot: Bot):
         f"\n"
         f"{text_answer_woman}"
     )
+
+
 # отправка дневного рейтинга в общий чат
 async def show_day_mileage_rating(bot: Bot):
     try:

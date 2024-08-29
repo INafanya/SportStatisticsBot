@@ -1,4 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram import types
 
 
 def get_start_keyboard(txt='Выберите действие'):
@@ -66,3 +67,30 @@ def make_row_keyboard(items: list[str], txt='') -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         input_field_placeholder=txt
     )
+
+# reply кнопка донатов в webapp
+def get_donate_button():
+    markup = InlineKeyboardMarkup(
+        row_width=1,
+        inline_keyboard=[[InlineKeyboardButton(text='Поддержать проект',
+                                               web_app=WebAppInfo(url=f'https://pay.cloudtips.ru/p/cbd68797'))
+                          ]]
+    )
+    return markup
+
+
+def webAppKeyboard():  # создание клавиатуры с webapp кнопкой
+    keyboard = types.ReplyKeyboardMarkup(row_width=1)  # создаем клавиатуру
+    webAppTest = types.WebAppInfo("https://telegram.mihailgok.ru")  # создаем webappinfo - формат хранения url
+    one_butt = types.KeyboardButton(text="Тестовая страница", web_app=webAppTest)  # создаем кнопку типа webapp
+    keyboard.add(one_butt)  # добавляем кнопки в клавиатуру
+
+    return keyboard  # возвращаем клавиатуру
+
+
+ikb_donate = InlineKeyboardMarkup(row_width=1,
+                                  inline_keyboard=[
+                                      [
+                                          InlineKeyboardButton(text='Донат', web_app=WebAppInfo(url=f'https://ya.ru/'))
+                                      ]
+                                  ])
