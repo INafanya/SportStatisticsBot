@@ -18,7 +18,7 @@ from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cance
 
 router: Router = Router()
 
-available_genders = ["Парень", "Девушка"]
+available_genders = ["️Парень", "Девушка"]
 available_categories = ["Begym", "Совкомбанк", "Beerun", "ДомРФ", "КРОК"]
 
 is_delete_mileage = False
@@ -51,18 +51,19 @@ async def command_start_handler(message: Message, bot: Bot) -> None:
                            )
 
 
-@router.message(F.chat.type == "private", F.text == "Регистрация")
+@router.message(F.chat.type == "private", F.text == "✅ Регистрация")
 async def znakomstvo(message: Message, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
-                             f"Напишите свои имя и фамилию:")
+                             f"Напишите свои имя и фамилию:",
+                             reply_markup=get_cancel_keyboard(txt='Имя Фамилия'))
         await state.set_state(Znakomstvo.add_name)
     else:
         await message.answer(f"Вы уже зарегистрировались", reply_markup=get_start_keyboard())
 
 
-@router.message(Znakomstvo.add_name)
+@router.message(Znakomstvo.add_name, F.text != "❌ Отмена")
 async def name_added(message: Message, state: FSMContext):
     await state.update_data(name_added=message.text)
     user_data = await state.get_data()
@@ -82,7 +83,7 @@ async def gender_chosen(message: Message, state: FSMContext):
     await state.set_state(Znakomstvo.choosing_categories)
 
 
-@router.message(Znakomstvo.choosing_genders)
+@router.message(Znakomstvo.choosing_genders, F.text != "❌ Отмена")
 async def gender_incorrectly(message: Message):
     await message.answer(
         text="Я не знаю такого пола.\n"
@@ -99,6 +100,9 @@ async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     fullname = user_data['name_added']
     gender = user_data['chosen_gender']
     category = message.text.lower()
+    gender_hi = "новый участник! 🏃🏻‍♂️"
+    if gender == available_genders[1].lower():
+        gender_hi = "новая участница! 🏃🏻‍♀️"
     await message.answer(
         text=f"Спасибо за регистрацию!\n"
              f"Вас зовут: {fullname}.\n"
@@ -108,15 +112,16 @@ async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     )
     await state.clear()
     add_new_user(telegram_id, username, fullname, gender, category)
+
     await bot.send_message(
         chat_id,
-        f"У нас новый участник!\n"
+        f"У нас {gender_hi}\n"
         f"<b>{fullname}</b> из клуба {category}\n"
         f"Желаем успехов в челлендже!"
     )
 
 
-@router.message(Znakomstvo.choosing_categories)
+@router.message(Znakomstvo.choosing_categories, F.text != "❌ Отмена")
 async def category_incorrectly(message: Message):
     await message.answer(
         text="У нас нет такого клуба.\n"
@@ -125,8 +130,8 @@ async def category_incorrectly(message: Message):
     )
 
 
-@router.message(F.text == "Добавление пробега")
-@router.message(F.text == "Удаление пробега")
+@router.message(F.text == "📈 Добавление пробега")
+@router.message(F.text == "📉 Удаление пробега")
 @router.message(F.chat.type == "private", Command("add"))
 async def command_add(message: Message, state: FSMContext) -> None:
     # проверка на наличия в БД данных о пользователе
@@ -148,7 +153,7 @@ async def command_add(message: Message, state: FSMContext) -> None:
         await state.set_state(Mileage_add_status.add_mileage_km)
 
 
-@router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_km_added(message: Message, state: FSMContext):
     try:
         if float(message.text) == 0 or float(message.text) < 0:
@@ -165,7 +170,7 @@ async def mileage_km_added(message: Message, state: FSMContext):
                              reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_hours, F.chat.type == "private", F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_hours, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_hour_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 24 or int(message.text) < 0:
@@ -182,7 +187,7 @@ async def mileage_hour_added(message: Message, state: FSMContext):
                              reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_minutes, F.chat.type == "private", F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_minutes, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_minutes_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 60:
@@ -200,7 +205,7 @@ async def mileage_minutes_added(message: Message, state: FSMContext):
 
 
 # Ввод секунд пробежки, добавление пробежки в БД и ответ в личку и группу
-@router.message(Mileage_add_status.add_mileage_time_seconds, F.chat.type == "private", F.text != "Отмена")
+@router.message(Mileage_add_status.add_mileage_time_seconds, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
     try:
         if int(message.text) > 60:
@@ -273,10 +278,10 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
 
 
 # обработка нажатия кнопки Отмена
-@router.message(F.chat.type == "private", F.text == "Отмена")
+@router.message(F.chat.type == "private", F.text == "❌ Отмена")
 async def cancel_button(message: Message, state: FSMContext):
     await message.answer(
-        text=f"Добавление пробега отменено",
+        text=f"Действие отменено",
         reply_markup=get_start_keyboard()
         # reply_markup=ReplyKeyboardRemove()
     )
@@ -353,11 +358,11 @@ async def cancel_button(message: Message, state: FSMContext):
 
 
 # обработчика команды /помощь
-@router.message(F.text == "Дополнительная информация")
+@router.message(F.text == "ℹ️ Дополнительная информация")
 @router.message(F.chat.type == "private", Command("help"))
 async def cmd_help(message: Message, bot: Bot):
-    donate_button = InlineKeyboardButton(text="Поддержать проект", url="https://pay.cloudtips.ru/p/cbd68797")
-    message_button = InlineKeyboardButton(text="Обратная связь", url="https://t.me/AVSolovyov")
+    donate_button = InlineKeyboardButton(text="💸 Поддержать проект", url="https://pay.cloudtips.ru/p/cbd68797")
+    message_button = InlineKeyboardButton(text="🆘 Обратная связь", url="https://t.me/AVSolovyov")
     row = [donate_button]
     rows = [[donate_button], [message_button]]
     markup = InlineKeyboardMarkup(inline_keyboard=rows)
@@ -369,7 +374,7 @@ async def cmd_help(message: Message, bot: Bot):
 
 
 # обработчика команды /стат
-@router.message(F.text == "Личная статистика")
+@router.message(F.text == "📝 Личная статистика")
 @router.message(F.chat.type == "private", Command("statistics"))
 async def cmd_user_statistics(message: Message, bot: Bot):
     telegram_id = message.from_user.id

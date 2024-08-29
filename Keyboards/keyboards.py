@@ -3,11 +3,11 @@ from aiogram import types
 
 
 def get_start_keyboard(txt='Выберите действие'):
-    button_1 = KeyboardButton(text="Регистрация")
-    button_2 = KeyboardButton(text="Добавление пробега")
-    button_3 = KeyboardButton(text="Удаление пробега")
-    button_4 = KeyboardButton(text="Личная статистика")
-    button_5 = KeyboardButton(text="Дополнительная информация")
+    button_1 = KeyboardButton(text="✅ Регистрация")
+    button_2 = KeyboardButton(text="📈 Добавление пробега")
+    button_3 = KeyboardButton(text="📉 Удаление пробега")
+    button_4 = KeyboardButton(text="📝 Личная статистика")
+    button_5 = KeyboardButton(text="ℹ️ Дополнительная информация")
     markup = ReplyKeyboardMarkup(
         keyboard=[[button_1], [button_2, button_3], [button_4], [button_5]],
         resize_keyboard=True,
@@ -46,9 +46,8 @@ def get_numbers_keyboard():
 
 def get_cancel_keyboard(txt=''):
     markup = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Отмена")]],
+        keyboard=[[KeyboardButton(text="❌ Отмена")]],
         resize_keyboard=True,
-        # one_time_keyboard=True,
         input_field_placeholder=txt
     )
     return markup
@@ -61,12 +60,23 @@ def make_row_keyboard(items: list[str], txt='') -> ReplyKeyboardMarkup:
     :param items: список текстов для кнопок
     :return: объект реплай-клавиатуры
     """
-    row = [KeyboardButton(text=item) for item in items]
-    return ReplyKeyboardMarkup(
-        keyboard=[row],
-        resize_keyboard=True,
-        input_field_placeholder=txt
-    )
+    if len(items) < 3:
+        row = [KeyboardButton(text=item) for item in items]
+        row_cancel = [KeyboardButton(text="❌ Отмена")]
+        return ReplyKeyboardMarkup(
+            keyboard=[row, row_cancel],
+            resize_keyboard=True,
+            input_field_placeholder=txt
+        )
+    else:
+        row_1 = [KeyboardButton(text=item) for item in items[:3]]
+        row_2 = [KeyboardButton(text=item) for item in items[3:]]
+        row_cancel = [KeyboardButton(text="❌ Отмена")]
+        return ReplyKeyboardMarkup(
+            keyboard=[row_1, row_2, row_cancel],
+            resize_keyboard=True,
+            input_field_placeholder=txt
+        )
 
 # reply кнопка донатов в webapp
 def get_donate_button():
@@ -86,11 +96,3 @@ def webAppKeyboard():  # создание клавиатуры с webapp кно�
     keyboard.add(one_butt)  # добавляем кнопки в клавиатуру
 
     return keyboard  # возвращаем клавиатуру
-
-
-ikb_donate = InlineKeyboardMarkup(row_width=1,
-                                  inline_keyboard=[
-                                      [
-                                          InlineKeyboardButton(text='Донат', web_app=WebAppInfo(url=f'https://ya.ru/'))
-                                      ]
-                                  ])
