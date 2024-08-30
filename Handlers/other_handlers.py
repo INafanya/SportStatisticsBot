@@ -143,7 +143,7 @@ async def command_add(message: Message, state: FSMContext) -> None:
         await state.clear()
     else:
         global is_delete_mileage
-        if message.text == "Удаление пробега":
+        if message.text == "📉 Удаление пробега":
             is_delete_mileage = True
         else:
             is_delete_mileage = False
