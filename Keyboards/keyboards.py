@@ -8,8 +8,9 @@ def get_start_keyboard(txt='Выберите действие'):
     button_3 = KeyboardButton(text="📉 Удаление пробега")
     button_4 = KeyboardButton(text="📝 Личная статистика")
     button_5 = KeyboardButton(text="ℹ️ Дополнительная информация")
+    button_6 = KeyboardButton(text="🏆 Ставка")
     markup = ReplyKeyboardMarkup(
-        keyboard=[[button_1], [button_2, button_3], [button_4], [button_5]],
+        keyboard=[[button_1, button_6], [button_2, button_3], [button_4], [button_5]],
         resize_keyboard=True,
         input_field_placeholder=txt
         # one_time_keyboard=True,
@@ -40,6 +41,14 @@ def get_numbers_keyboard():
     markup = ReplyKeyboardMarkup(
         keyboard=[row_1, row_2, row_3, row_4, row_5],
         resize_keyboard=True
+    )
+    return markup
+
+
+def get_yes_no_keyboard():
+    markup = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="Да")], [KeyboardButton(text="Нет")]],
+        resize_keyboard=True,
     )
     return markup
 

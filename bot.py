@@ -38,35 +38,35 @@ async def main() -> None:
     # Регистрируем обработчики(handlers)
     dp.include_router(other_handlers.router)
 
-    #if __name__ == '__main__':
+    # if __name__ == '__main__':
     # Инициализируем планировщик
     scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    # суточный таймер. Обнуляет дневной пробег каждый день в 23:55
+    # Суточный таймер. Обнуляет дневной пробег каждый день в 23:55
     scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
-    # суточный таймер. копирует суммарный пробег по клубам в БД
+    # Суточный таймер. копирует суммарный пробег по клубам в БД
     scheduler.add_job(copy_day_club_mileage, 'cron', hour=23, minute=57)
-    # суточный таймер. выводит вчерашний рейтинг
+    # Суточный таймер. Выводит вчерашний рейтинг
     scheduler.add_job(show_day_rating, 'cron', hour=8, minute=1, args=(bot,))
-    # суточный таймер. выводит вчерашний рейтинг по клубам
+    # Суточный таймер. Выводит вчерашний рейтинг по клубам
     scheduler.add_job(show_club_mileage_rating, 'cron', hour=8, minute=0, args=(bot,))
 
-    # недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
+    # Недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
     scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
-    # суточный таймер. выводит рейтинг за прошедшую неделю
+    # Суточный таймер. Выводит рейтинг за прошедшую неделю
     scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=2, args=(bot,))
 
     # 4-х недельный таймер. Обнуляет и копирует пробег в каждое 4-е воскресенье в 23:58
-    #scheduler.add_job(copy_and_clear_month_mileage, 'cron', day='last sun', hour=23, minute=58)
+    # scheduler.add_job(copy_and_clear_month_mileage, 'cron', day='last sun', hour=23, minute=58)
 
-    #scheduler.add_job(show_month_mileage, 'cron', day='first mon', hour=8, minute=2)
+    # scheduler.add_job(show_month_mileage, 'cron', day='first mon', hour=8, minute=2)
 
     # месячный таймер. Обнуляет месячный пробег в последний день месяца в 23:58
-    #scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
+    # scheduler.add_job(copy_and_clear_month_mileage, 'cron', month='*', day='last', hour=23, minute=58)
 
     scheduler.start()
     # проверяем на наличие БД
     logger.info("Проверка наличия БД")
-    create_sql_db()
+    await create_sql_db()
 
     # Пропускаем накопившиеся апдейты телеги и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)

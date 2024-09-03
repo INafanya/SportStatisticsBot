@@ -1,14 +1,17 @@
 import sqlite3
+import aiosqlite
 import pandas as pd
 from datetime import datetime, timedelta
 
 
 # создание БД
-def create_sql_db():
-    try:
-        conn = sqlite3.connect('mileage.db')
-        cursor = conn.cursor()
-        cursor.execute('''
+async def create_sql_db():
+    async with aiosqlite.connect('mileage.db') as db:
+        # def create_sql_db():
+        #     try:
+        #         conn = await aiosqlite.connect('mileage.db')
+        #         cursor = await conn.cursor()
+        await db.execute('''
                     CREATE TABLE IF NOT EXISTS users_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -27,10 +30,14 @@ def create_sql_db():
                         month_mileage_points FLOAT,
                         total_mileage FLOAT,
                         total_mileage_time INTEGER,
-                        total_mileage_points FLOAT
+                        total_mileage_points FLOAT,
+                        bid_category_man TEXT,
+                        bid_mileage_man FLOAT,
+                        bid_category_woman TEXT,
+                        bid_mileage_woman FLOAT
                     )
                     ''')
-        cursor.execute('''
+        await db.execute('''
                     CREATE TABLE IF NOT EXISTS points_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -44,7 +51,7 @@ def create_sql_db():
                         points FLOAT
                             )
                             ''')
-        cursor.execute('''
+        await db.execute('''
                     CREATE TABLE IF NOT EXISTS day_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -58,7 +65,7 @@ def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        cursor.execute('''
+        await db.execute('''
                     CREATE TABLE IF NOT EXISTS week_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -72,7 +79,7 @@ def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        cursor.execute('''
+        await db.execute('''
                     CREATE TABLE IF NOT EXISTS month_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -86,7 +93,7 @@ def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        cursor.execute('''
+        await db.execute('''
                             CREATE TABLE IF NOT EXISTS day_club_mileage (
                                 id INTEGER PRIMARY KEY,
                                 category TEXT,
@@ -96,12 +103,12 @@ def create_sql_db():
                                 active_users INTEGER
                             )
                             ''')
-    except sqlite3.Error as error:
-        print("Ошибка при работе с SQLite при создании БД", error)
-    finally:
-        if conn:
-            conn.close()
-            print("Есть БД. Соединение с SQLite закрыто")
+    # except sqlite3.Error as error:
+    #     print("Ошибка при работе с SQLite при создании БД", error)
+    # finally:
+    #     if conn:
+    #         conn.close()
+    #         print("Есть БД. Соединение с SQLite закрыто")
 
 
 # запрос статистики по пользователю
@@ -370,6 +377,35 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
         return day_mileage, day_mileage_time, day_mileage_points
 
 
+# внесение ставки в БД
+def update_bid(telegram_id: int, bid_man_category: str, bid_man: float, bid_woman_category: str, bid_woman: float):
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+                    UPDATE users_mileage 
+                    SET 
+                    bid_category_man = ?,
+                    bid_mileage_man = ?,
+                    bid_category_woman = ?,
+                    bid_mileage_woman = ?
+                    WHERE 
+                    telegram_id = ?
+                    ''',
+                       (bid_man_category,
+                        bid_man,
+                        bid_woman_category,
+                        bid_woman,
+                        telegram_id)
+                       )
+        conn.commit()
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+    finally:
+        if conn:
+            conn.close()
+
+
 # копирование и отчистка дневной статистики
 def copy_and_clear_day_mileage():
     try:
@@ -615,7 +651,6 @@ def read_club_rating():
         print("Ошибка при работе с SQLite", error)
     finally:
         if conn:
-
             conn.close()
         return man_rating, woman_rating
 
@@ -801,6 +836,33 @@ def get_yesterweek():
     yesterweek = datetime.now() - timedelta(days=7)
     yesterweek_format = yesterweek.strftime(date_format)
     return yesterweek_format
+
+
+# получение ставки по пользователю
+def read_user_bids_from_db(telegram_id: int):
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT
+                username,
+                fullname,
+                gender,
+                category,
+                bid_category_man,
+                bid_mileage_man,
+                bid_category_woman,
+                bid_mileage_woman
+            FROM users_mileage 
+            WHERE telegram_id = ?
+            ''', (telegram_id,), )
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite при чтении статистики пользователя", error)
+    finally:
+        if conn:
+            user_bids = cursor.fetchone()
+            conn.close()
+            return user_bids
 
 
 def export_data_to_file():

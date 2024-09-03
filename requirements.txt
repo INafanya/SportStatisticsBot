@@ -7,3 +7,4 @@ xlrd
 xlwt
 xlsxwriter
 openpyxl
+aiosqlite~=0.20.0
