@@ -66,7 +66,7 @@ async def main() -> None:
     scheduler.start()
     # проверяем на наличие БД
     logger.info("Проверка наличия БД")
-    await create_sql_db()
+    create_sql_db()
 
     # Пропускаем накопившиеся апдейты телеги и запускаем polling
     await bot.delete_webhook(drop_pending_updates=True)

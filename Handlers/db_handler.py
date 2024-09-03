@@ -1,17 +1,17 @@
 import sqlite3
-import aiosqlite
+#import aiosqlite
 import pandas as pd
 from datetime import datetime, timedelta
 
 
 # создание БД
-async def create_sql_db():
-    async with aiosqlite.connect('mileage.db') as db:
-        # def create_sql_db():
-        #     try:
-        #         conn = await aiosqlite.connect('mileage.db')
-        #         cursor = await conn.cursor()
-        await db.execute('''
+#async def create_sql_db():
+    #async with aiosqlite.connect('mileage.db') as db:
+def create_sql_db():
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -37,7 +37,7 @@ async def create_sql_db():
                         bid_mileage_woman FLOAT
                     )
                     ''')
-        await db.execute('''
+        cursor.execute('''
                     CREATE TABLE IF NOT EXISTS points_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -51,7 +51,7 @@ async def create_sql_db():
                         points FLOAT
                             )
                             ''')
-        await db.execute('''
+        cursor.execute('''
                     CREATE TABLE IF NOT EXISTS day_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -65,7 +65,7 @@ async def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        await db.execute('''
+        cursor.execute('''
                     CREATE TABLE IF NOT EXISTS week_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -79,7 +79,7 @@ async def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        await db.execute('''
+        cursor.execute('''
                     CREATE TABLE IF NOT EXISTS month_mileage (
                         id INTEGER PRIMARY KEY,
                         telegram_id INTEGER,
@@ -93,7 +93,7 @@ async def create_sql_db():
                         points FLOAT
                     )
                     ''')
-        await db.execute('''
+        cursor.execute('''
                             CREATE TABLE IF NOT EXISTS day_club_mileage (
                                 id INTEGER PRIMARY KEY,
                                 category TEXT,
@@ -103,12 +103,12 @@ async def create_sql_db():
                                 active_users INTEGER
                             )
                             ''')
-    # except sqlite3.Error as error:
-    #     print("Ошибка при работе с SQLite при создании БД", error)
-    # finally:
-    #     if conn:
-    #         conn.close()
-    #         print("Есть БД. Соединение с SQLite закрыто")
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite при создании БД", error)
+    finally:
+        if conn:
+            conn.close()
+            print("Есть БД. Соединение с SQLite закрыто")
 
 
 # запрос статистики по пользователю
