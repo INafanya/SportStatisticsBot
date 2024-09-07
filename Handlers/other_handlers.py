@@ -163,6 +163,7 @@ async def add_bid(message: Message, state: FSMContext):
     # проверка на наличия в БД данных о ставке
     # bids = read_user_statistics_from_db(message.from_user.id)
     bids = read_user_bids_from_db(message.from_user.id)
+    bids_on = False
     if not bids:
         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
                              f"Для начала, зарегистрируйся.",
@@ -174,7 +175,7 @@ async def add_bid(message: Message, state: FSMContext):
                                  f"{bids[7]} км. на девушек из клуба {bids[6]}",
                                  reply_markup=get_start_keyboard())
 
-        else:
+        elif bids_on:
             await message.answer(f"Привет, <b>{bids[1]}</b>!\n"
                                  f"Здесь ты можешь поставить свои километры пробега на то, какой клуб "
                                  f"парней и девушек выиграет.\n"
@@ -184,6 +185,9 @@ async def add_bid(message: Message, state: FSMContext):
                                  f"Готов рискнуть? Тогда сначала выбери клуб парней:",
                                  reply_markup=make_row_keyboard(available_categories, txt='Выбери мужской клуб.'))
             await state.set_state(Bids.choosing_bid_category_man)
+        else:
+            await message.answer(f"Прием ставок окончен.",
+                                 reply_markup=get_start_keyboard())
 
 
 @router.message(Bids.choosing_bid_category_man, F.chat.type == "private", F.text.in_(available_categories),
