@@ -241,7 +241,7 @@ def update_today_data_db(telegram_id: int, new_mileage: float, new_mileage_time:
     else:
         coeff = 1.1879 + (abs(new_mileage) - 42) * 0.00912506
     # коэффициент пола
-    if gender == 'Девушка':
+    if gender == 'девушка':
         gender_coeff = 72
     else:
         gender_coeff = 60
@@ -875,37 +875,37 @@ def export_data_to_file():
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
         df_1 = pd.read_sql('''SELECT username as Парни_1, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Парень' AND category = 1 AND total_mileage > 0
+                            WHERE gender = 'парень' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_2_start_row = df_1.shape[0] + 3
         df_2 = pd.read_sql('''SELECT username as Парни_2, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Парень' AND category = 2 AND total_mileage > 0
+                            WHERE gender = 'парень' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_3_start_row = df_2_start_row + df_2.shape[0] + 3
         df_3 = pd.read_sql('''SELECT username as Парни_3, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Парень' AND category = 3 AND total_mileage > 0
+                            WHERE gender = 'парень' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
 
         df_4 = pd.read_sql('''SELECT username as Девушки_1, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Девушка' AND category = 1 AND total_mileage > 0
+                            WHERE gender = 'девушка' AND category = 1 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_5_start_row = df_4.shape[0] + 3
         df_5 = pd.read_sql('''SELECT username as Девушки_2, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Девушка' AND category = 2 AND total_mileage > 0
+                            WHERE gender = 'девушка' AND category = 2 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_6_start_row = df_5.shape[0] + df_5_start_row + 3
         df_6 = pd.read_sql('''SELECT username as Девушки_3, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'Девушки' AND category = 3 AND total_mileage > 0
+                            WHERE gender = 'девушка' AND category = 3 AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_7_start_row = df_3.shape[0] + df_3_start_row + 3
