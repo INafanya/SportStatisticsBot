@@ -873,15 +873,15 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
-        df_1 = pd.read_sql('''SELECT username as Парни_1, total_mileage as Пробег
+        df_1 = pd.read_sql('''SELECT username as Парни_Казбек, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'парень' AND category = 1 AND total_mileage > 0
+                            WHERE gender = 'парень' AND category = 'Казбек' AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_2_start_row = df_1.shape[0] + 3
-        df_2 = pd.read_sql('''SELECT username as Парни_2, total_mileage as Пробег
+        df_2 = pd.read_sql('''SELECT username as Парни_Эльбрус, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'парень' AND category = 2 AND total_mileage > 0
+                            WHERE gender = 'парень' AND category = 'Эльбрус' AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_3_start_row = df_2_start_row + df_2.shape[0] + 3
@@ -891,15 +891,15 @@ def export_data_to_file():
                             ORDER BY total_mileage DESC 
                             ''', conn)
 
-        df_4 = pd.read_sql('''SELECT username as Девушки_1, total_mileage as Пробег
+        df_4 = pd.read_sql('''SELECT username as Девушки_Казбек, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'девушка' AND category = 1 AND total_mileage > 0
+                            WHERE gender = 'девушка' AND category = 'Казбек' AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_5_start_row = df_4.shape[0] + 3
-        df_5 = pd.read_sql('''SELECT username as Девушки_2, total_mileage as Пробег
+        df_5 = pd.read_sql('''SELECT username as Девушки_Эльбрус, total_mileage as Пробег
                             FROM users_mileage
-                            WHERE gender = 'девушка' AND category = 2 AND total_mileage > 0
+                            WHERE gender = 'девушка' AND category = 'Эльбрус' AND total_mileage > 0
                             ORDER BY total_mileage DESC 
                             ''', conn)
         df_6_start_row = df_5.shape[0] + df_5_start_row + 3
