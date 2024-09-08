@@ -69,7 +69,7 @@ def convert_seconds(seconds):
 @router.message(CommandStart())
 async def command_start_handler(message: Message, bot: Bot) -> None:
     await bot.send_message(chat_id=message.from_user.id,
-                           text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыбери действие:",
+                           text=f"Привет, <b>{message.from_user.full_name}</b>!\nВыберите действие:",
                            reply_markup=get_start_keyboard(),
                            # reply_markup=get_inline_kb()
                            )
@@ -177,13 +177,13 @@ async def add_bid(message: Message, state: FSMContext):
 
         elif bids_on:
             await message.answer(f"Привет, <b>{bids[1]}</b>!\n"
-                                 f"Здесь ты можешь поставить свои километры пробега на то, какой клуб "
+                                 f"Здесь Вы можете поставить свои километры пробега на то, какой клуб "
                                  f"парней и девушек выиграет.\n"
-                                 f"Если ты угадаешь, то ставка прибавится к твоему итоговому пробегу.\n"
-                                 f"Если нет, ставка вычтется из твоего итогового пробега.\n"
+                                 f"Если Вы угадаете, то ставка прибавится к Вашему итоговому пробегу.\n"
+                                 f"Если нет, ставка вычтется из Вашего итогового пробега.\n"
                                  f"Максимальная суммарная ставка на клубы 35 км.\n"
-                                 f"Готов рискнуть? Тогда сначала выбери клуб парней:",
-                                 reply_markup=make_row_keyboard(available_categories, txt='Выбери мужской клуб.'))
+                                 f"Готовы рискнуть? Тогда сначала выберите клуб парней:",
+                                 reply_markup=make_row_keyboard(available_categories, txt='Выберите мужской клуб.'))
             await state.set_state(Bids.choosing_bid_category_man)
         else:
             await message.answer(f"Прием ставок окончен.",
@@ -195,7 +195,7 @@ async def add_bid(message: Message, state: FSMContext):
 async def bid_man_category_chosen(message: Message, state: FSMContext):
     await state.update_data(bid_man_category=message.text)
     await message.answer(
-        text="Отлично! Укажи сколько километров готов(а) поставить на мужской клуб.",
+        text="Отлично! Укажите сколько километров Вы готовы поставить на мужской клуб.",
         reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
     )
     await state.set_state(Bids.add_bid_category_man)
@@ -208,8 +208,8 @@ async def bid_man_added(message: Message, state: FSMContext):
             raise ValueError()
         await state.update_data(bid_man=float(message.text))
         await message.answer(
-            text="Отлично! Теперь выбери женский клуб.",
-            reply_markup=make_row_keyboard(available_categories, txt='Выбери женский клуб.'))
+            text="Отлично! Теперь выберите женский клуб.",
+            reply_markup=make_row_keyboard(available_categories, txt='Выберите женский клуб.'))
         await state.set_state(Bids.choosing_bid_category_woman)
     except ValueError:
         await message.answer(text="Принимаются ставки суммарно не более 35 км.",
@@ -221,7 +221,7 @@ async def bid_man_added(message: Message, state: FSMContext):
 async def bid_woman_category_chosen(message: Message, state: FSMContext):
     await state.update_data(bid_woman_category=message.text)
     await message.answer(
-        text="Отлично! Укажи сколько километров готов(а) поставить на женский клуб.",
+        text="Отлично! Укажите сколько километров Вы готовы поставить на женский клуб.",
         reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
     )
     await state.set_state(Bids.add_bid_category_woman)
@@ -250,7 +250,7 @@ async def bid_man_added(message: Message, bot: Bot, state: FSMContext):
         update_bid(telegram_id, bid_man_category, bid_man, bid_woman_category, bid_woman)
         await bot.send_message(
             chat_id,
-            f"<b>{message.from_user.full_name}</b> сделал ставку!\n"
+            f"<b>{message.from_user.full_name}</b> сделал(а) ставку!\n"
         )
     except ValueError:
         await message.answer(text="Принимаются ставки суммарно не более 35 км.",
