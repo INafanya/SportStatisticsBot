@@ -926,7 +926,7 @@ def export_data_to_file():
             points_mileage.to_excel(writer, sheet_name='Статистика по каждому пробегу', index=False)
             days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
             week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
-            club_rating.to_excel(writer, sheet_name='Рейтинг по клубам', index=False)
+            club_rating.to_excel(writer, sheet_name='Клубный рейтинг', index=False)
             df_1.to_excel(writer, sheet_name='Сводные таблицы', index=False)
             df_2.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_2_start_row)
             df_3.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_3_start_row)
