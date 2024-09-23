@@ -102,7 +102,7 @@ async def name_added(message: Message, state: FSMContext):
 
 @router.message(Znakomstvo.choosing_genders, F.text.in_(available_genders))
 async def gender_chosen(message: Message, state: FSMContext):
-    await state.update_data(chosen_gender=message.text.lower())
+    await state.update_data(chosen_gender=message.text)
     await message.answer(
         text="Спасибо. Теперь выберите ваш клуб:",
         reply_markup=make_row_keyboard(available_categories, txt='Ваш клуб:')
@@ -128,7 +128,7 @@ async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     gender = user_data['chosen_gender']
     category = message.text
     gender_hi = "новый участник! 🏃🏻‍♂️"
-    if gender == available_genders[1].lower():
+    if gender.lower() == available_genders[1].lower():
         gender_hi = "новая участница! 🏃🏻‍♀️"
     await message.answer(
         text=f"Спасибо за регистрацию!\n"
@@ -386,7 +386,7 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
             await state.clear()
             await bot.send_message(
                 chat_id,
-                f"<b>{message.from_user.full_name}</b> добавил пробег:\n"
+                f"<b>{message.from_user.full_name}</b> добавил(а) пробег:\n"
                 f"{round(mileage_km, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
             )
         # удаление пробега
@@ -409,7 +409,7 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
             await state.clear()
             await bot.send_message(
                 chat_id,
-                f"<b>{message.from_user.full_name}</b> удалил пробег:\n"
+                f"<b>{message.from_user.full_name}</b> удалил(а) пробег:\n"
                 f"{round(mileage_km, 2)} км. за {new_mileage_time}. Баллы: {round(new_mileage_points, 2)}\n"
             )
 

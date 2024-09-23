@@ -868,6 +868,7 @@ def read_user_bids_from_db(telegram_id: int):
 def export_data_to_file():
     try:
         conn = sqlite3.connect('mileage.db')
+        club_rating = pd.read_sql('SELECT * FROM day_club_mileage', conn)
         points_mileage = pd.read_sql('SELECT * FROM points_mileage', conn)
         users_mileage_today = pd.read_sql('SELECT * FROM users_mileage', conn)
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
@@ -925,6 +926,7 @@ def export_data_to_file():
             points_mileage.to_excel(writer, sheet_name='Статистика по каждому пробегу', index=False)
             days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
             week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
+            club_rating.to_excel(writer, sheet_name='Рейтинг по клубам', index=False)
             df_1.to_excel(writer, sheet_name='Сводные таблицы', index=False)
             df_2.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_2_start_row)
             df_3.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_3_start_row)
@@ -933,6 +935,7 @@ def export_data_to_file():
             df_6.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4, startrow=df_6_start_row)
             df_7.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_7_start_row)
             df_8.to_excel(writer, sheet_name='Сводные таблицы', index=False, startcol=4, startrow=df_8_start_row)
+
     except PermissionError as error:
         print(f"Ошибка экспорта, {error}")
     finally:
