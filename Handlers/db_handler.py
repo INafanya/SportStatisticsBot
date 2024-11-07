@@ -394,7 +394,6 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
 def update_favorite_mileage(favorite, mileage_km):
     today = datetime.now().strftime('%d.%m.%Y')
     sql_txt = f'''INSERT INTO others_data (date, favorite, mileage) VALUES ('{today}', {favorite}, {mileage_km})'''
-    print(sql_txt)
     try:
         conn = sqlite3.connect('mileage.db')
         cursor = conn.cursor()

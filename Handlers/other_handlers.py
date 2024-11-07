@@ -348,7 +348,6 @@ async def mileage_seconds_added(message: Message, state: FSMContext):
         await message.answer(
             text="Выберите кому зачислить ваш пробег:",
             reply_markup=make_row_keyboard(["1", "2"], txt='Ваш фаворит:')
-            # reply_markup=get_cancel_keyboard(txt="Выберите один из вариантов")
         )
         await state.set_state(MileageAddStatus.choosing_favorite)
 
