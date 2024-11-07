@@ -13,7 +13,7 @@ from Handlers.db_handler import (
     read_week_time_rating, read_week_points_rating, read_club_rating, update_favorite_mileage)
 from Config.config_reader import admin, chat_id
 
-from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard, get_donate_button
+from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard
 
 # from Keyboards.inline_keyboard import get_inline_kb
 
@@ -269,12 +269,18 @@ async def category_incorrectly(message: Message):
 @router.message(F.text == "📉 Удаление пробега")
 @router.message(F.chat.type == "private", Command("add"))
 async def command_add(message: Message, state: FSMContext) -> None:
+    # проверка на разрешение внесения пробега
+    if int(datetime.datetime.now().strftime('%H')) < 9:
+        await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
+                             f"Ввод пробега доступен с 9:00 до 00:00.\n",
+                             reply_markup=get_start_keyboard())
+        await state.clear()
+        return
     # проверка на наличия в БД данных о пользователе
     if not read_user_statistics_from_db(message.from_user.id):
         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
                              f"Для начала необходимо зарегистрироваться.\n",
-                             reply_markup=get_start_keyboard()
-                             )
+                             reply_markup=get_start_keyboard())
         await state.clear()
     else:
         global is_delete_mileage
