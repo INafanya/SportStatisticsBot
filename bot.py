@@ -22,8 +22,8 @@ async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s',
-        # filename="bot_log.log",
-        # filemode="w"
+        filename="bot_log.log",
+        filemode="w"
     )
 
     # Выводим в консоль старт бота
