@@ -103,6 +103,20 @@ def create_sql_db():
                                 active_users INTEGER
                             )
                             ''')
+        cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS others_data (
+                                id INTEGER PRIMARY KEY,
+                                username TEXT,
+                                date DATE,
+                                mileage INTEGER,
+                                text_field_1 TEXT,
+                                text_field_2 TEXT,
+                                float_field_1 FLOAT,
+                                float_field_2 FLOAT,
+                                int_field_1 INTEGER,
+                                int_field_2 INTEGER
+                                    )
+                                    ''')
     except sqlite3.Error as error:
         print("Ошибка при работе с SQLite при создании БД", error)
     finally:
