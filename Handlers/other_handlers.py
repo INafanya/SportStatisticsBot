@@ -368,7 +368,6 @@ async def favorites_choosen(message: Message, bot: Bot, state: FSMContext):
     try:
         if int(message.text) not in (1, 2):
             raise ValueError()
-
         await state.update_data(favorite=int(message.text))
         user_mileage_data = await state.get_data()
         mileage_km = user_mileage_data['mileage_km']
