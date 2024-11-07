@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import datetime
 from aiogram import Router, F, Bot, types
@@ -11,7 +10,7 @@ from aiogram.utils.formatting import Text, Bold
 from Handlers.db_handler import (
     read_user_statistics_from_db, update_day_data_db, read_day_rating, read_week_rating, get_yesterday, get_yesterweek,
     export_data_to_file, add_new_user, read_day_time_rating, update_today_data_db, read_day_points_rating,
-    read_week_time_rating, read_week_points_rating, read_club_rating, update_bid, read_user_bids_from_db)
+    read_week_time_rating, read_week_points_rating, read_club_rating, update_favorite_mileage)
 from Config.config_reader import admin, chat_id
 
 from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cancel_keyboard, get_donate_button
@@ -21,7 +20,7 @@ from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cance
 router: Router = Router()
 
 available_genders = ["️Парень", "Девушка"]
-available_categories = ["Begym", "Совкомбанк", "Казбек", "Эльбрус", "ДомРФ", "КРОК"]
+available_categories = ["Beegym"]
 
 is_delete_mileage = False
 
@@ -47,18 +46,19 @@ class Znakomstvo(StatesGroup):
     choosing_categories = State()
 
 
-class Mileage_add_status(StatesGroup):
+class MileageAddStatus(StatesGroup):
     add_mileage_km = State()
     add_mileage_time_hours = State()
     add_mileage_time_minutes = State()
     add_mileage_time_seconds = State()
+    choosing_favorite = State()
 
 
-class Bids(StatesGroup):
-    choosing_bid_category_man = State()
-    add_bid_category_man = State()
-    choosing_bid_category_woman = State()
-    add_bid_category_woman = State()
+# class Bids(StatesGroup):
+#     choosing_bid_category_man = State()
+#     add_bid_category_man = State()
+#     choosing_bid_category_woman = State()
+#     add_bid_category_woman = State()
 
 
 def convert_seconds(seconds):
@@ -95,7 +95,7 @@ async def name_added(message: Message, state: FSMContext):
     await state.update_data(name_added=message.text)
     user_data = await state.get_data()
     await message.answer(
-        text=f"Приятно познакомится, {user_data['name_added']}! Теперь укажите кто Вы:",
+        text=f"Приятно познакомиться, {user_data['name_added']}! Теперь укажите кто Вы:",
         reply_markup=make_row_keyboard(available_genders, txt='Вы:'))
     await state.set_state(Znakomstvo.choosing_genders)
 
@@ -119,7 +119,7 @@ async def gender_incorrectly(message: Message):
     )
 
 
-@router.message(Znakomstvo.choosing_categories, F.text.in_(available_categories))
+@router.message(Znakomstvo.choosing_categories, F.text == "Beegym")
 async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     user_data = await state.get_data()
     telegram_id = message.from_user.id
@@ -147,7 +147,6 @@ async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
         f"Желаем успехов в челлендже!"
     )
 
-
 @router.message(Znakomstvo.choosing_categories, F.text != "❌ Отмена")
 async def category_incorrectly(message: Message):
     await message.answer(
@@ -156,115 +155,114 @@ async def category_incorrectly(message: Message):
         reply_markup=make_row_keyboard(available_categories, txt='Ваш клуб:')
     )
 
-
-@router.message(F.chat.type == "private", F.text == "🏆 Ставка")
-async def add_bid(message: Message, state: FSMContext):
-    # проверка на регистрацию в челлендже
-    # проверка на наличия в БД данных о ставке
-    # bids = read_user_statistics_from_db(message.from_user.id)
-    bids = read_user_bids_from_db(message.from_user.id)
-    bids_on = False
-    if not bids:
-        await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
-                             f"Для начала, зарегистрируйся.",
-                             reply_markup=get_start_keyboard())
-    else:
-        if bids[4]:
-            await message.answer(f"Вы уже сделали ставку:\n"
-                                 f"{bids[5]} км. на парней из клуба {bids[4]}\n"
-                                 f"{bids[7]} км. на девушек из клуба {bids[6]}",
-                                 reply_markup=get_start_keyboard())
-
-        elif bids_on:
-            await message.answer(f"Привет, <b>{bids[1]}</b>!\n"
-                                 f"Здесь Вы можете поставить свои километры пробега на то, какой клуб "
-                                 f"парней и девушек выиграет.\n"
-                                 f"Если Вы угадаете, то ставка прибавится к Вашему итоговому пробегу.\n"
-                                 f"Если нет, ставка вычтется из Вашего итогового пробега.\n"
-                                 f"Максимальная суммарная ставка на клубы 35 км.\n"
-                                 f"Готовы рискнуть? Тогда сначала выберите клуб парней:",
-                                 reply_markup=make_row_keyboard(available_categories, txt='Выберите мужской клуб.'))
-            await state.set_state(Bids.choosing_bid_category_man)
-        else:
-            await message.answer(f"Прием ставок окончен.",
-                                 reply_markup=get_start_keyboard())
-
-
-@router.message(Bids.choosing_bid_category_man, F.chat.type == "private", F.text.in_(available_categories),
-                F.text != "❌ Отмена")
-async def bid_man_category_chosen(message: Message, state: FSMContext):
-    await state.update_data(bid_man_category=message.text)
-    await message.answer(
-        text="Отлично! Укажите сколько километров Вы готовы поставить на мужской клуб.",
-        reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
-    )
-    await state.set_state(Bids.add_bid_category_man)
+# @router.message(F.chat.type == "private", F.text == "🏆 Ставка")
+# async def add_bid(message: Message, state: FSMContext):
+#     # проверка на регистрацию в челлендже
+#     # проверка на наличия в БД данных о ставке
+#     # bids = read_user_statistics_from_db(message.from_user.id)
+#     bids = read_user_bids_from_db(message.from_user.id)
+#     bids_on = False
+#     if not bids:
+#         await message.answer(f"Привет, <b>{message.from_user.full_name}</b>!\n"
+#                              f"Для начала, зарегистрируйся.",
+#                              reply_markup=get_start_keyboard())
+#     else:
+#         if bids[4]:
+#             await message.answer(f"Вы уже сделали ставку:\n"
+#                                  f"{bids[5]} км. на парней из клуба {bids[4]}\n"
+#                                  f"{bids[7]} км. на девушек из клуба {bids[6]}",
+#                                  reply_markup=get_start_keyboard())
+#
+#         elif bids_on:
+#             await message.answer(f"Привет, <b>{bids[1]}</b>!\n"
+#                                  f"Здесь Вы можете поставить свои километры пробега на то, какой клуб "
+#                                  f"парней и девушек выиграет.\n"
+#                                  f"Если Вы угадаете, то ставка прибавится к Вашему итоговому пробегу.\n"
+#                                  f"Если нет, ставка вычтется из Вашего итогового пробега.\n"
+#                                  f"Максимальная суммарная ставка на клубы 35 км.\n"
+#                                  f"Готовы рискнуть? Тогда сначала выберите клуб парней:",
+#                                  reply_markup=make_row_keyboard(available_categories, txt='Выберите мужской клуб.'))
+#             await state.set_state(Bids.choosing_bid_category_man)
+#         else:
+#             await message.answer(f"Прием ставок окончен.",
+#                                  reply_markup=get_start_keyboard())
 
 
-@router.message(Bids.add_bid_category_man, F.chat.type == "private", F.text != "❌ Отмена")
-async def bid_man_added(message: Message, state: FSMContext):
-    try:
-        if float(message.text) == 0 or float(message.text) < 0 or float(message.text) > 35:
-            raise ValueError()
-        await state.update_data(bid_man=float(message.text))
-        await message.answer(
-            text="Отлично! Теперь выберите женский клуб.",
-            reply_markup=make_row_keyboard(available_categories, txt='Выберите женский клуб.'))
-        await state.set_state(Bids.choosing_bid_category_woman)
-    except ValueError:
-        await message.answer(text="Принимаются ставки суммарно не более 35 км.",
-                             reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
+# @router.message(Bids.choosing_bid_category_man, F.chat.type == "private", F.text.in_(available_categories),
+#                 F.text != "❌ Отмена")
+# async def bid_man_category_chosen(message: Message, state: FSMContext):
+#     await state.update_data(bid_man_category=message.text)
+#     await message.answer(
+#         text="Отлично! Укажите сколько километров Вы готовы поставить на мужской клуб.",
+#         reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
+#     )
+#     await state.set_state(Bids.add_bid_category_man)
 
 
-@router.message(Bids.choosing_bid_category_woman, F.chat.type == "private",
-                F.text.in_(available_categories), F.text != "❌ Отмена")
-async def bid_woman_category_chosen(message: Message, state: FSMContext):
-    await state.update_data(bid_woman_category=message.text)
-    await message.answer(
-        text="Отлично! Укажите сколько километров Вы готовы поставить на женский клуб.",
-        reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
-    )
-    await state.set_state(Bids.add_bid_category_woman)
-
-
-@router.message(Bids.add_bid_category_woman, F.chat.type == "private", F.text != "❌ Отмена")
-async def bid_man_added(message: Message, bot: Bot, state: FSMContext):
-    try:
-        user_data = await state.get_data()
-        if float(message.text) == 0 or float(message.text) < 0 or float(message.text) > 35 - user_data['bid_man']:
-            raise ValueError()
-        await state.update_data(bid_woman=float(message.text))
-        user_data = await state.get_data()
-        telegram_id = message.from_user.id
-        bid_man_category = user_data['bid_man_category']
-        bid_man = user_data['bid_man']
-        bid_woman_category = user_data['bid_woman_category']
-        bid_woman = user_data['bid_woman']
-        await message.answer(
-            text=f"Вы сделали ставку:\n"
-                 f"{bid_man} км. на парней из клуба {bid_man_category}\n"
-                 f"{bid_woman} км. на девушек из клуба {bid_woman_category}\n"
-                 f"Желаем удачи!",
-            reply_markup=get_start_keyboard())
-        await state.clear()
-        update_bid(telegram_id, bid_man_category, bid_man, bid_woman_category, bid_woman)
-        await bot.send_message(
-            chat_id,
-            f"<b>{message.from_user.full_name}</b> сделал(а) ставку!\n"
-        )
-    except ValueError:
-        await message.answer(text="Принимаются ставки суммарно не более 35 км.",
-                             reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
-
-
-@router.message(Bids.choosing_bid_category_man, F.text != "❌ Отмена")
-@router.message(Bids.choosing_bid_category_woman, F.text != "❌ Отмена")
-async def bid_category_incorrectly(message: Message):
-    await message.answer(
-        text="У нас нет такого клуба.\n"
-             "Пожалуйста, выберите один из вариантов:",
-        reply_markup=make_row_keyboard(available_categories, txt='Выберите клуб:')
-    )
+# @router.message(Bids.add_bid_category_man, F.chat.type == "private", F.text != "❌ Отмена")
+# async def bid_man_added(message: Message, state: FSMContext):
+#     try:
+#         if float(message.text) == 0 or float(message.text) < 0 or float(message.text) > 35:
+#             raise ValueError()
+#         await state.update_data(bid_man=float(message.text))
+#         await message.answer(
+#             text="Отлично! Теперь выберите женский клуб.",
+#             reply_markup=make_row_keyboard(available_categories, txt='Выберите женский клуб.'))
+#         await state.set_state(Bids.choosing_bid_category_woman)
+#     except ValueError:
+#         await message.answer(text="Принимаются ставки суммарно не более 35 км.",
+#                              reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
+#
+#
+# @router.message(Bids.choosing_bid_category_woman, F.chat.type == "private",
+#                 F.text.in_(available_categories), F.text != "❌ Отмена")
+# async def bid_woman_category_chosen(message: Message, state: FSMContext):
+#     await state.update_data(bid_woman_category=message.text)
+#     await message.answer(
+#         text="Отлично! Укажите сколько километров Вы готовы поставить на женский клуб.",
+#         reply_markup=get_cancel_keyboard(txt="Ставка, км.км")
+#     )
+#     await state.set_state(Bids.add_bid_category_woman)
+#
+#
+# @router.message(Bids.add_bid_category_woman, F.chat.type == "private", F.text != "❌ Отмена")
+# async def bid_man_added(message: Message, bot: Bot, state: FSMContext):
+#     try:
+#         user_data = await state.get_data()
+#         if float(message.text) == 0 or float(message.text) < 0 or float(message.text) > 35 - user_data['bid_man']:
+#             raise ValueError()
+#         await state.update_data(bid_woman=float(message.text))
+#         user_data = await state.get_data()
+#         telegram_id = message.from_user.id
+#         bid_man_category = user_data['bid_man_category']
+#         bid_man = user_data['bid_man']
+#         bid_woman_category = user_data['bid_woman_category']
+#         bid_woman = user_data['bid_woman']
+#         await message.answer(
+#             text=f"Вы сделали ставку:\n"
+#                  f"{bid_man} км. на парней из клуба {bid_man_category}\n"
+#                  f"{bid_woman} км. на девушек из клуба {bid_woman_category}\n"
+#                  f"Желаем удачи!",
+#             reply_markup=get_start_keyboard())
+#         await state.clear()
+#         update_bid(telegram_id, bid_man_category, bid_man, bid_woman_category, bid_woman)
+#         await bot.send_message(
+#             chat_id,
+#             f"<b>{message.from_user.full_name}</b> сделал(а) ставку!\n"
+#         )
+#     except ValueError:
+#         await message.answer(text="Принимаются ставки суммарно не более 35 км.",
+#                              reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
+#
+#
+# @router.message(Bids.choosing_bid_category_man, F.text != "❌ Отмена")
+# @router.message(Bids.choosing_bid_category_woman, F.text != "❌ Отмена")
+# async def bid_category_incorrectly(message: Message):
+#     await message.answer(
+#         text="У нас нет такого клуба.\n"
+#              "Пожалуйста, выберите один из вариантов:",
+#         reply_markup=make_row_keyboard(available_categories, txt='Выберите клуб:')
+#     )
 
 
 @router.message(F.text == "📈 Добавление пробега")
@@ -287,10 +285,10 @@ async def command_add(message: Message, state: FSMContext) -> None:
         await message.answer(text="Введите пробег в км",
                              reply_markup=get_cancel_keyboard(txt="Введите пробег в км"),
                              )
-        await state.set_state(Mileage_add_status.add_mileage_km)
+        await state.set_state(MileageAddStatus.add_mileage_km)
 
 
-@router.message(Mileage_add_status.add_mileage_km, F.chat.type == "private", F.text != "❌ Отмена")
+@router.message(MileageAddStatus.add_mileage_km, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_km_added(message: Message, state: FSMContext):
     try:
         if float(message.text) == 0 or float(message.text) < 0:
@@ -300,14 +298,14 @@ async def mileage_km_added(message: Message, state: FSMContext):
             text="Введите часы пробежки:",
             reply_markup=get_cancel_keyboard(txt="Часы пробежки")
         )
-        await state.set_state(Mileage_add_status.add_mileage_time_hours)
+        await state.set_state(MileageAddStatus.add_mileage_time_hours)
 
     except ValueError:
         await message.answer(text="Введите корректный пробег: км.км",
                              reply_markup=get_cancel_keyboard(txt="Введите расстояние в км.км"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_hours, F.chat.type == "private", F.text != "❌ Отмена")
+@router.message(MileageAddStatus.add_mileage_time_hours, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_hour_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 24 or int(message.text) < 0:
@@ -317,14 +315,14 @@ async def mileage_hour_added(message: Message, state: FSMContext):
             text="Введите минуты пробежки:",
             reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки")
         )
-        await state.set_state(Mileage_add_status.add_mileage_time_minutes)
+        await state.set_state(MileageAddStatus.add_mileage_time_minutes)
 
     except ValueError:
         await message.answer(text="Введи корректное время",
                              reply_markup=get_cancel_keyboard(txt="Введите минуты пробежки"))
 
 
-@router.message(Mileage_add_status.add_mileage_time_minutes, F.chat.type == "private", F.text != "❌ Отмена")
+@router.message(MileageAddStatus.add_mileage_time_minutes, F.chat.type == "private", F.text != "❌ Отмена")
 async def mileage_minutes_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 60:
@@ -334,33 +332,53 @@ async def mileage_minutes_added(message: Message, state: FSMContext):
             text="Введите секунды пробежки:",
             reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки")
         )
-        await state.set_state(Mileage_add_status.add_mileage_time_seconds)
+        await state.set_state(MileageAddStatus.add_mileage_time_seconds)
 
     except ValueError:
         await message.answer(text="Введи корректное время",
                              reply_markup=get_cancel_keyboard(txt="Введите секунды пробежки"))
 
 
-# Ввод секунд пробежки, добавление пробежки в БД и ответ в личку и группу
-@router.message(Mileage_add_status.add_mileage_time_seconds, F.chat.type == "private", F.text != "❌ Отмена")
-async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
+@router.message(MileageAddStatus.add_mileage_time_seconds, F.chat.type == "private", F.text != "❌ Отмена")
+async def mileage_seconds_added(message: Message, state: FSMContext):
     try:
         if int(message.text) > 60:
             raise ValueError()
         await state.update_data(mileage_seconds=int(message.text))
+        await message.answer(
+            text="Выберите кому зачислить ваш пробег:",
+            reply_markup=make_row_keyboard(["1", "2"], txt='Ваш фаворит:')
+            # reply_markup=get_cancel_keyboard(txt="Выберите один из вариантов")
+        )
+        await state.set_state(MileageAddStatus.choosing_favorite)
+
+    except ValueError:
+        await message.answer(text="Выберите один из вариантов",
+                             reply_markup=get_cancel_keyboard(txt="Выберите один из вариантов"))
+
+
+# Добавление пробежки в БД и ответ в личку и группу
+@router.message(MileageAddStatus.choosing_favorite, F.chat.type == "private", F.text != "❌ Отмена")
+async def favorites_choosen(message: Message, bot: Bot, state: FSMContext):
+    try:
+        if int(message.text) not in (1, 2):
+            raise ValueError()
+
+        await state.update_data(favorite=int(message.text))
         user_mileage_data = await state.get_data()
         mileage_km = user_mileage_data['mileage_km']
         mileage_hour = user_mileage_data['mileage_hour']
         mileage_minutes = user_mileage_data['mileage_minutes']
         mileage_seconds = user_mileage_data['mileage_seconds']
+        favorite = user_mileage_data['favorite']
         full_time_seconds = int(mileage_hour) * 3600 + int(mileage_minutes) * 60 + int(mileage_seconds)
         if ((full_time_seconds / 60) / mileage_km) < 2:
             await message.answer(f"У нас новый мировой рекорд! Или нет?\n"
                                  f"Темп не может быть выше 2 мин./км.")
-            await message.answer(text="Введите пробег в км",
-                                 reply_markup=get_cancel_keyboard(txt="Введите пробег в км"),
+            await message.answer(text="Введите пробег",
+                                 reply_markup=get_cancel_keyboard(txt="Введите пробег"),
                                  )
-            await state.set_state(Mileage_add_status.add_mileage_km)
+            await state.set_state(MileageAddStatus.add_mileage_km)
             return
         telegram_id = message.from_user.id
 
@@ -372,6 +390,7 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
             day_mileage, day_mileage_time_seconds, day_mileage_points = update_day_data_db(telegram_id, mileage_km,
                                                                                            full_time_seconds,
                                                                                            new_mileage_points)
+            update_favorite_mileage(favorite, mileage_km)
             new_mileage_time = convert_seconds(full_time_seconds)
             day_mileage_time = convert_seconds(day_mileage_time_seconds)
             await bot.send_message(telegram_id,
@@ -380,7 +399,8 @@ async def mileage_seconds_added(message: Message, bot: Bot, state: FSMContext):
                                    f"Баллы: <b>{round(new_mileage_points, 2)}</b>\n"
                                    f"Итого за сегодня:\n"
                                    f"<b>{round(day_mileage, 2)}</b> км. за <b>{day_mileage_time}</b>. "
-                                   f"Баллы: <b>{round(day_mileage_points, 2)}</b>",
+                                   f"Баллы: <b>{round(day_mileage_points, 2)}</b>\n"
+                                   f"Выбранный фаворит: <b>{favorite}</b>",
                                    reply_markup=get_start_keyboard()
                                    )
             await state.clear()

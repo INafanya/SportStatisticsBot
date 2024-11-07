@@ -22,8 +22,8 @@ async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format=u'%(filename)s:%(lineno)d #%(levelname)-8s [%(asctime)s] - %(name)s - %(message)s',
-        filename="bot_log.log",
-        filemode="w"
+        # filename="bot_log.log",
+        # filemode="w"
     )
 
     # Выводим в консоль старт бота
@@ -38,22 +38,21 @@ async def main() -> None:
     # Регистрируем обработчики(handlers)
     dp.include_router(other_handlers.router)
 
-    # if __name__ == '__main__':
     # Инициализируем планировщик
     scheduler: AsyncIOScheduler = AsyncIOScheduler(timezone="Europe/Moscow")
     # Суточный таймер. Обнуляет дневной пробег каждый день в 23:55
     scheduler.add_job(copy_and_clear_day_mileage, 'cron', hour=23, minute=55)
     # Суточный таймер. копирует суммарный пробег по клубам в БД
-    scheduler.add_job(copy_day_club_mileage, 'cron', hour=23, minute=57)
+    # scheduler.add_job(copy_day_club_mileage, 'cron', hour=23, minute=57)
     # Суточный таймер. Выводит вчерашний рейтинг
-    scheduler.add_job(show_day_rating, 'cron', hour=8, minute=1, args=(bot,))
+    # scheduler.add_job(show_day_rating, 'cron', hour=8, minute=1, args=(bot,))
     # Суточный таймер. Выводит вчерашний рейтинг по клубам
-    scheduler.add_job(show_club_mileage_rating, 'cron', hour=8, minute=0, args=(bot,))
+    # scheduler.add_job(show_club_mileage_rating, 'cron', hour=8, minute=0, args=(bot,))
 
     # Недельный таймер. Обнуляет недельный пробег каждое воскресенье в 23:56
     scheduler.add_job(copy_and_clear_week_mileage, 'cron', day_of_week='sun', hour=23, minute=56)
     # Суточный таймер. Выводит рейтинг за прошедшую неделю
-    scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=2, args=(bot,))
+    # scheduler.add_job(show_week_rating, 'cron', day_of_week='mon', hour=8, minute=2, args=(bot,))
 
     # 4-х недельный таймер. Обнуляет и копирует пробег в каждое 4-е воскресенье в 23:58
     # scheduler.add_job(copy_and_clear_month_mileage, 'cron', day='last sun', hour=23, minute=58)

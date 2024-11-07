@@ -1,12 +1,12 @@
 import sqlite3
-#import aiosqlite
+# import aiosqlite
 import pandas as pd
 from datetime import datetime, timedelta
 
 
 # создание БД
-#async def create_sql_db():
-    #async with aiosqlite.connect('mileage.db') as db:
+# async def create_sql_db():
+# async with aiosqlite.connect('mileage.db') as db:
 def create_sql_db():
     try:
         conn = sqlite3.connect('mileage.db')
@@ -106,7 +106,7 @@ def create_sql_db():
         cursor.execute('''
                             CREATE TABLE IF NOT EXISTS others_data (
                                 id INTEGER PRIMARY KEY,
-                                username TEXT,
+                                favorite INTEGER,
                                 date DATE,
                                 mileage INTEGER,
                                 text_field_1 TEXT,
@@ -389,6 +389,22 @@ def update_day_data_db(telegram_id: int, new_mileage: float, new_mileage_time: i
             conn.close()
             # print("Соединение с SQLite закрыто")
         return day_mileage, day_mileage_time, day_mileage_points
+
+
+def update_favorite_mileage(favorite, mileage_km):
+    today = datetime.now().strftime('%d.%m.%Y')
+    sql_txt = f'''INSERT INTO others_data (date, favorite, mileage) VALUES ('{today}', {favorite}, {mileage_km})'''
+    print(sql_txt)
+    try:
+        conn = sqlite3.connect('mileage.db')
+        cursor = conn.cursor()
+        cursor.execute(sql_txt)
+        conn.commit()
+    except sqlite3.Error as error:
+        print("Ошибка при работе с SQLite", error)
+    finally:
+        if conn:
+            conn.close()
 
 
 # внесение ставки в БД
@@ -887,6 +903,8 @@ def export_data_to_file():
         users_mileage_today = pd.read_sql('SELECT * FROM users_mileage', conn)
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
+        favorites_mileage = pd.read_sql('''SELECT date as Дата, favorite as Фаворит, sum(mileage) as Пробег
+                                            FROM others_data''', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
         df_1 = pd.read_sql('''SELECT username as Парни_Казбек, total_mileage as Пробег
                             FROM users_mileage
@@ -941,6 +959,7 @@ def export_data_to_file():
             days_mileage.to_excel(writer, sheet_name='Пробеги по дням', index=False)
             week_mileage.to_excel(writer, sheet_name='Пробеги по неделям', index=False)
             club_rating.to_excel(writer, sheet_name='Клубный рейтинг', index=False)
+            favorites_mileage.to_excel(writer, sheet_name='Дед Мороз и Снегурочка', index=False)
             df_1.to_excel(writer, sheet_name='Сводные таблицы', index=False)
             df_2.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_2_start_row)
             df_3.to_excel(writer, sheet_name='Сводные таблицы', index=False, startrow=df_3_start_row)
