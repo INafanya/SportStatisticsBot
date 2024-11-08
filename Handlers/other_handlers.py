@@ -20,7 +20,7 @@ from Keyboards.keyboards import make_row_keyboard, get_start_keyboard, get_cance
 router: Router = Router()
 
 available_genders = ["️Парень", "Девушка"]
-available_categories = ["Beegym"]
+available_categories = ["Beerun"]
 
 is_delete_mileage = False
 
