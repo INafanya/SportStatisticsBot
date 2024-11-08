@@ -119,7 +119,7 @@ async def gender_incorrectly(message: Message):
     )
 
 
-@router.message(Znakomstvo.choosing_categories, F.text == "Beegym")
+@router.message(Znakomstvo.choosing_categories, F.text == "Beerun")
 async def categories_chosen(message: Message, state: FSMContext, bot: Bot):
     user_data = await state.get_data()
     telegram_id = message.from_user.id
