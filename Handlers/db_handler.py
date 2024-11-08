@@ -903,7 +903,7 @@ def export_data_to_file():
         days_mileage = pd.read_sql('SELECT * FROM day_mileage', conn)
         week_mileage = pd.read_sql('SELECT * FROM week_mileage', conn)
         favorites_mileage = pd.read_sql('''SELECT date as Дата, favorite as Фаворит, sum(mileage) as Пробег
-                                            FROM others_data''', conn)
+                                            FROM others_data GROUP BY date, favorite''', conn)
         filename = f"Day_mileage_{datetime.now().strftime('%d.%m.%Y_%H_%M')}.xlsx"
         df_1 = pd.read_sql('''SELECT username as Парни_Казбек, total_mileage as Пробег
                             FROM users_mileage
