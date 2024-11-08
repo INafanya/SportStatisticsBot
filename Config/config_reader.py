@@ -20,8 +20,9 @@ class Settings(BaseSettings):
 config = Settings()
 
 admin = (1060800091, 741201603)
-chat_id = -4590685465 # id группы Челлендж_тест
+# chat_id = -4590685465 # id группы Челлендж_тест
 # chat_id = -1002219883771
+chat_id = -1002411426064
 botname = 'https://t.me/SportStatistics_bot'
 #chat_id = -1002079889214
 #chat_id = -1002086508659
